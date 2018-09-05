@@ -45,6 +45,7 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             restaurantsObjectStore.createIndex('is_favorite', 'is_favorite', { unique: false });
             restaurantsObjectStore.createIndex('createdAt', 'createdAt', { unique: false });
             restaurantsObjectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            if (debug) console.log('restaurantsObjectStore');
 
             // autoIncrement example - https://developers.google.com/web/ilt/pwa/working-with-indexeddb
             const operatingHoursObjectStore = upgradeDb.createObjectStore('operating_hours', {
@@ -57,6 +58,7 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             operatingHoursObjectStore.createIndex('hours', 'hours', { unique: false });
             operatingHoursObjectStore.createIndex('createdAt', 'createdAt', { unique: false });
             operatingHoursObjectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            if (debug) console.log('operatingHoursObjectStore');
 
             const reviewsObjectStore = upgradeDb.createObjectStore('reviews', {
                 keyPath: 'review_id',
@@ -69,6 +71,7 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             reviewsObjectStore.createIndex('comments', 'comments', { unique: false });
             reviewsObjectStore.createIndex('createdAt', 'createdAt', { unique: false });
             reviewsObjectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            if (debug) console.log('reviewsObjectStore');
 
             let pendingObjectStore = upgradeDb.createObjectStore('pending', {
                 keyPath: 'id',
@@ -79,6 +82,7 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             pendingObjectStore.createIndex('method', 'method', { unique: false });
             pendingObjectStore.createIndex('headers', 'headers', { unique: false });
             pendingObjectStore.createIndex('body', 'body', { unique: false });
+            if (debug) console.log('pendingObjectStore');
 
             addV1Data = true;
     }
@@ -88,8 +92,8 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
     throw error;
 });
 
-if (debug) console.log('dbPromise is set');
 dbPromise.then(db => {
+    if (debug) console.log('dbPromise is set');
     const dbVersion = db.version;
     if (debug) console.log('dbVersion=' + dbVersion);
     if (addV1Data) {
@@ -97,6 +101,7 @@ dbPromise.then(db => {
         v1AddReviewsData(db);
     }
 }).catch(error => {
+    if (debug) console.log('dbPromise is not set');
     // Oops!. Got an error from server.
     error.message = `Request failed load data. Returned status of ${error.message}`;
     throw error;
