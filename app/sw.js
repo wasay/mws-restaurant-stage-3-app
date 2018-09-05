@@ -15,15 +15,19 @@ const dbName = 'topRestaurants3';
 const dbVersion = 1;
 let debug = true;
 
+if (debug) console.log('start /sw.js');
+
 if (debug) console.log('appPrefix=' + (appPrefix));
 if (debug) console.log('staticCacheName=' + (staticCacheName));
 if (debug) console.log('contentImgsCache=' + (contentImgsCache));
 if (debug) console.log('allCaches=' + (allCaches));
+
 if (debug) console.log('dbName=' + (dbName));
 if (debug) console.log('dbVersion=' + (dbVersion));
 if (debug) console.log('debug=' + (debug));
 
 let addV1Data = false;
+if (debug) console.log('addV1Data=' + (addV1Data));
 
 // https://github.com/jakearchibald/idb
 // https://developers.google.com/web/ilt/pwa/lab-indexeddb
@@ -48,7 +52,7 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             restaurantsObjectStore.createIndex('is_favorite', 'is_favorite', {unique: false});
             restaurantsObjectStore.createIndex('createdAt', 'createdAt', {unique: false});
             restaurantsObjectStore.createIndex('updatedAt', 'updatedAt', {unique: false});
-            if (debug) console.log('restaurantsObjectStore');
+            if (debug) console.log('createIndex-restaurantsObjectStore');
 
             // autoIncrement example - https://developers.google.com/web/ilt/pwa/working-with-indexeddb
             const operatingHoursObjectStore = upgradeDb.createObjectStore('operating_hours', {
@@ -61,7 +65,7 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             operatingHoursObjectStore.createIndex('hours', 'hours', {unique: false});
             operatingHoursObjectStore.createIndex('createdAt', 'createdAt', {unique: false});
             operatingHoursObjectStore.createIndex('updatedAt', 'updatedAt', {unique: false});
-            if (debug) console.log('operatingHoursObjectStore');
+            if (debug) console.log('createIndex-operatingHoursObjectStore');
 
             const reviewsObjectStore = upgradeDb.createObjectStore('reviews', {
                 keyPath: 'review_id',
@@ -74,7 +78,7 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             reviewsObjectStore.createIndex('comments', 'comments', {unique: false});
             reviewsObjectStore.createIndex('createdAt', 'createdAt', {unique: false});
             reviewsObjectStore.createIndex('updatedAt', 'updatedAt', {unique: false});
-            if (debug) console.log('reviewsObjectStore');
+            if (debug) console.log('createIndex-reviewsObjectStore');
 
             let pendingObjectStore = upgradeDb.createObjectStore('pending', {
                 keyPath: 'id',
@@ -85,9 +89,10 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
             pendingObjectStore.createIndex('method', 'method', {unique: false});
             pendingObjectStore.createIndex('headers', 'headers', {unique: false});
             pendingObjectStore.createIndex('body', 'body', {unique: false});
-            if (debug) console.log('pendingObjectStore');
+            if (debug) console.log('createIndex-pendingObjectStore');
 
             addV1Data = true;
+            if (debug) console.log('addV1Data=' + (addV1Data));
     }
 })
     .catch(error => {
@@ -95,11 +100,13 @@ const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
         error.message = (`Request failed createDB. Returned status of ${error.message}`);
         throw error;
     });
+if (debug) console.log('addV1Data=' + (addV1Data));
 
 dbPromise.then(db => {
     if (debug) console.log('dbPromise is set');
     const dbVersion = db.version;
     if (debug) console.log('dbVersion=' + (dbVersion));
+
     if (addV1Data) {
         v1AddRestaurantsData(db);
         v1AddReviewsData(db);
@@ -577,6 +584,7 @@ function getRestaurantById(id) {
     );
 }
 
+if (debug) console.log('end /sw.js');
 
 // assign dbPromise object to dbhelper class
 // DBHelper.dbPromise = dbPromise;
