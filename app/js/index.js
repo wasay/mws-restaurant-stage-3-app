@@ -5,7 +5,8 @@ let neighborhoods,
 let map;
 let markers = [];
 
-console.log('index');
+console.log('typeof debug=' + (typeof debug));
+if (debug) console.log('start /js/index.js');
 
 /**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
@@ -256,3 +257,4 @@ addMarkersToMap = (restaurants = self.restaurants) => {
   });
 };
 
+if (debug) console.log('end /js/index.js');

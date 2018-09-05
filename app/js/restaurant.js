@@ -4,6 +4,9 @@ let restaurant;
 let reviews;
 let map;
 
+console.log('typeof debug=' + (typeof debug));
+if (debug) console.log('start /js/restaurant.js');
+
 /**
  * Initialize Google map, called from HTML.
  */
@@ -280,3 +283,4 @@ function onloadListener()
         }
     }
 }
+if (debug) console.log('end /js/restaurant.js');

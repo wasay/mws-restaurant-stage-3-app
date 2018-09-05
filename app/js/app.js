@@ -9,7 +9,9 @@ const allCaches = [
 ];
 const dbName = 'topRestaurants3';
 const dbVersion = 1;
-let debug = true;
+
+console.log('typeof debug=' + (typeof debug));
+if (debug) console.log('start /js/app.js');
 
 if (debug) console.log('appPrefix=' + (appPrefix));
 if (debug) console.log('staticCacheName=' + (staticCacheName));
@@ -111,3 +113,5 @@ function debugObject(obj) {
 
     return result;
 }
+
+if (debug) console.log('end /js/app.js');
