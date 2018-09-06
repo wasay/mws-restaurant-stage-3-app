@@ -4,120 +4,11 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts
 self.importScripts('js/idb.js');
 
-const appPrefix = 'mws-restaurant-stage-3';
-const staticCacheName = 'mws-restaurant-stage-3' + '-v1';
-const contentImgsCache = 'mws-restaurant-stage-3' + '-content-imgs';
-const allCaches = [
-    staticCacheName,
-    contentImgsCache
-];
-const dbName = 'topRestaurants3';
-const dbVersion = 1;
-let debug = true;
-
+let debug = false;
 if (debug) console.log('start /sw.js');
 
-if (debug) console.log('appPrefix=' + (appPrefix));
-if (debug) console.log('staticCacheName=' + (staticCacheName));
-if (debug) console.log('contentImgsCache=' + (contentImgsCache));
-if (debug) console.log('allCaches=' + (allCaches));
+self.importScripts('js/dbhelper.min.js');
 
-if (debug) console.log('dbName=' + (dbName));
-if (debug) console.log('dbVersion=' + (dbVersion));
-if (debug) console.log('debug=' + (debug));
-
-let addV1Data = false;
-if (debug) console.log('addV1Data=' + (addV1Data));
-
-// https://github.com/jakearchibald/idb
-// https://developers.google.com/web/ilt/pwa/lab-indexeddb
-// https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore
-const dbPromise = idb.open(dbName, dbVersion, function (upgradeDb) {
-    if (debug) console.log('sw.createDB()-upgradeDb.oldVersion=' + (upgradeDb.oldVersion));
-
-    switch (upgradeDb.oldVersion) {
-        case 0:
-            let restaurantsObjectStore = upgradeDb.createObjectStore('restaurants', {
-                keyPath: 'id',
-                autoIncrement: true
-            });
-            restaurantsObjectStore.createIndex('id', 'id', {unique: true});
-            restaurantsObjectStore.createIndex('name', 'name', {unique: false});
-            restaurantsObjectStore.createIndex('neighborhood', 'neighborhood', {unique: false});
-            restaurantsObjectStore.createIndex('photograph', 'photograph', {unique: false});
-            restaurantsObjectStore.createIndex('address', 'address', {unique: false});
-            restaurantsObjectStore.createIndex('lat', 'lat', {unique: false});
-            restaurantsObjectStore.createIndex('lng', 'lng', {unique: false});
-            restaurantsObjectStore.createIndex('cuisine_type', 'cuisine_type', {unique: false});
-            restaurantsObjectStore.createIndex('is_favorite', 'is_favorite', {unique: false});
-            restaurantsObjectStore.createIndex('createdAt', 'createdAt', {unique: false});
-            restaurantsObjectStore.createIndex('updatedAt', 'updatedAt', {unique: false});
-            if (debug) console.log('createIndex-restaurantsObjectStore');
-
-            // autoIncrement example - https://developers.google.com/web/ilt/pwa/working-with-indexeddb
-            const operatingHoursObjectStore = upgradeDb.createObjectStore('operating_hours', {
-                keyPath: 'operating_hour_id',
-                autoIncrement: true
-            });
-            operatingHoursObjectStore.createIndex('operating_hour_id', 'operating_hour_id', {unique: true});
-            operatingHoursObjectStore.createIndex('restaurant_id', 'restaurant_id', {unique: false});
-            operatingHoursObjectStore.createIndex('day', 'day', {unique: false});
-            operatingHoursObjectStore.createIndex('hours', 'hours', {unique: false});
-            operatingHoursObjectStore.createIndex('createdAt', 'createdAt', {unique: false});
-            operatingHoursObjectStore.createIndex('updatedAt', 'updatedAt', {unique: false});
-            if (debug) console.log('createIndex-operatingHoursObjectStore');
-
-            const reviewsObjectStore = upgradeDb.createObjectStore('reviews', {
-                keyPath: 'review_id',
-                autoIncrement: true
-            });
-            reviewsObjectStore.createIndex('id', 'id', {unique: true});
-            reviewsObjectStore.createIndex('restaurant_id', 'restaurant_id', {unique: false});
-            reviewsObjectStore.createIndex('name', 'name', {unique: false});
-            reviewsObjectStore.createIndex('rating', 'rating', {unique: false});
-            reviewsObjectStore.createIndex('comments', 'comments', {unique: false});
-            reviewsObjectStore.createIndex('createdAt', 'createdAt', {unique: false});
-            reviewsObjectStore.createIndex('updatedAt', 'updatedAt', {unique: false});
-            if (debug) console.log('createIndex-reviewsObjectStore');
-
-            let pendingObjectStore = upgradeDb.createObjectStore('pending', {
-                keyPath: 'id',
-                autoIncrement: true
-            });
-            pendingObjectStore.createIndex('id', 'id', {unique: true});
-            pendingObjectStore.createIndex('url', 'url', {unique: false});
-            pendingObjectStore.createIndex('method', 'method', {unique: false});
-            pendingObjectStore.createIndex('headers', 'headers', {unique: false});
-            pendingObjectStore.createIndex('body', 'body', {unique: false});
-            if (debug) console.log('createIndex-pendingObjectStore');
-
-            addV1Data = true;
-            if (debug) console.log('addV1Data=' + (addV1Data));
-    }
-})
-    .catch(error => {
-        // Oops!. Got an error from server.
-        error.message = (`Request failed createDB. Returned status of ${error.message}`);
-        throw error;
-    });
-if (debug) console.log('addV1Data=' + (addV1Data));
-
-dbPromise.then(db => {
-    if (debug) console.log('dbPromise is set');
-    const dbVersion = db.version;
-    if (debug) console.log('dbVersion=' + (dbVersion));
-
-    if (addV1Data) {
-        v1AddRestaurantsData(db);
-        v1AddReviewsData(db);
-    }
-})
-    .catch(error => {
-        if (debug) console.log('dbPromise is not set');
-        // Oops!. Got an error from server.
-        error.message = (`Request failed load data. Returned status of ${error.message}`);
-        throw error;
-    });
 
 self.addEventListener('install', function (event) {
     if (debug) console.log('sw-install()');
@@ -193,7 +84,7 @@ self.addEventListener('fetch', function (event) {
     if (debug) console.log('location.origin=' + (location.origin));
 
     if (requestUrl.port === '1337') {
-        if (dbPromise && dbPromise.db && dbPromise.db.transaction.objectStore('restaurants')) {
+        if (DBHelper.dbPromise && DBHelper.dbPromise.db && DBHelper.dbPromise.db.transaction.objectStore('restaurants')) {
             const jsonResult = serveJSON(requestUrl);
             if (jsonResult) {
                 return jsonResult;
@@ -337,135 +228,11 @@ function serveJSON(requestUrl) {
     return [];
 }
 
-function v1AddRestaurantsData(db) {
-    debug = false;
-    if (debug) console.log('v1AddRestaurantsData()');
-
-    return fetch(DBHelper.DATABASE_URL_RESTAURANTS)
-        .then(response => response.json())
-        .then(function (neighborhoods) {
-
-            if (debug) console.log('version0AddRestaurantsData()-neighborhoods');
-            if (debug) console.log('neighborhoods=' + (neighborhoods));
-
-            neighborhoods.forEach(restaurant => {
-                if (debug) console.log('neighborhoods-restaurant()');
-
-                // add to database
-
-                if (debug) console.log('restaurant-restaurant-start');
-                const txRestaurants = db.transaction('restaurants', 'readwrite');
-                let restaurantsStore = txRestaurants.objectStore('restaurants');
-
-                restaurantsStore.get(restaurant.id).then(function (item) {
-
-                    if (item) return true;
-
-                    //https://developer.mozilla.org/en-US/docs/Web/API/IDBObjectStore
-                    const rtNewItem = [{
-                        id: restaurant.id,
-                        name: restaurant.name,
-                        neighborhood: restaurant.neighborhood,
-                        photograph: restaurant.photograph,
-                        address: restaurant.address,
-                        lat: restaurant.latlng.lat,
-                        lng: restaurant.latlng.lng,
-                        cuisine_type: restaurant.cuisine_type,
-                        is_favorite: restaurant.is_favorite,
-                        createdAt: restaurant.createdAt,
-                        updatedAt: restaurant.updatedAt
-                    }];
-                    restaurantsStore.add(rtNewItem[0]);
-                    txRestaurants.complete;
-
-                    if (debug) console.log('restaurant-restaurant-complete');
-
-                    if (debug) console.log('restaurant-operating_hours-start');
-                    let operating_hours = restaurant.operating_hours;
-
-                    const txOperatingHours = db.transaction('operating_hours', 'readwrite');
-                    let operatingHoursStore = txOperatingHours.objectStore('operating_hours');
-                    for (const indx in operating_hours) {
-                        if (debug) console.log('indx=' + (indx));
-                        if (debug) console.log('operating_hours[indx]=' + (operating_hours[indx]));
-                        operatingHoursStore.add({
-                            restaurant_id: restaurant.id,
-                            day: indx,
-                            hours: operating_hours[indx],
-                            createdAt: restaurant.createdAt,
-                            updatedAt: restaurant.updatedAt
-                        });
-                    }
-                    txOperatingHours.complete;
-                    if (debug) console.log('restaurant-operating_hours-complete');
-
-                });
-            });
-
-            return true;
-        })
-        .catch(error => {
-            // Oops!. Got an error from server.
-            error.message = (`Request failed v1AddRestaurantsData. Returned status of ${error.message}`);
-
-            throw error;
-        });
-}
-
-function v1AddReviewsData(db) {
-    debug = false;
-    if (debug) console.log('v1AddReviewsData()');
-
-    return fetch(DBHelper.DATABASE_URL_REVIEWS)
-        .then(response => response.json())
-        .then(function (reviews) {
-
-            if (debug) console.log('v1AddReviewsData()-reviews');
-            if (debug) console.log('reviews=' + (reviews));
-
-            if (debug) console.log('restaurant-reviews-start');
-            const txReviews = db.transaction('reviews', 'readwrite');
-            let reviewsStore = txReviews.objectStore('reviews');
-            if (debug) console.log('reviews=' + (reviews));
-
-            for (const rkey in reviews) {
-                if (debug) console.log('rkey=' + (rkey));
-                if (debug) console.log('review[rkey]=' + (reviews[rkey]));
-                if (debug) console.log('reviews[rkey].id=' + (reviews[rkey].id));
-                if (debug) console.log('reviews[rkey].restaurant_id=' + (reviews[rkey].restaurant_id));
-                if (debug) console.log('reviews[rkey].name=' + (reviews[rkey].name));
-                if (debug) console.log('reviews[rkey].createdAt=' + (reviews[rkey].createdAt));
-                if (debug) console.log('reviews[rkey].rating=' + (reviews[rkey].rating));
-                if (debug) console.log('reviews[rkey].comments=' + (reviews[rkey].comments));
-                reviewsStore.add({
-                    id: reviews[rkey].id,
-                    restaurant_id: reviews[rkey].restaurant_id,
-                    name: reviews[rkey].name,
-                    rating: reviews[rkey].rating,
-                    comments: reviews[rkey].comments,
-                    createdAt: reviews[rkey].createdAt,
-                    updatedAt: reviews[rkey].updatedAt
-                });
-            }
-            txReviews.complete;
-            if (debug) console.log('restaurant-reviews-complete');
-
-            return true;
-        })
-        .catch(error => {
-            // Oops!. Got an error from server.
-            error.message = (`Request failed v1AddReviewsData. Returned status of ${error.message}`);
-
-            throw error;
-        });
-}
 
 function getAllRestaurants() {
     if (debug) console.log('getAllRestaurants()');
 
-    //if (!dbPromise) return JSON.stringify([]);
-
-    return idb.open(dbName).then(function (db) {
+    return DBHelper.dbPromise.then(function (db) {
         const txRestaurants = db.transaction('restaurants', 'readonly');
         let restaurantsStore = txRestaurants.objectStore('restaurants');
         return restaurantsStore.getAll();
@@ -528,7 +295,7 @@ function getAllRestaurants() {
 function getRestaurantById(id) {
     if (debug) console.log('getRestaurantById()');
 
-    return idb.open(dbName).then(function (db) {
+    return DBHelper.dbPromise.then(function (db) {
         const txRestaurants = db.transaction('restaurants', 'readonly');
         let restaurantsStore = txRestaurants.objectStore('restaurants');
         return restaurantsStore.get(id);
@@ -585,6 +352,3 @@ function getRestaurantById(id) {
 }
 
 if (debug) console.log('end /sw.js');
-
-// assign dbPromise object to dbhelper class
-// DBHelper.dbPromise = dbPromise;

@@ -4,14 +4,14 @@ let restaurant;
 let reviews;
 let map;
 
-console.log('typeof debug=' + (typeof debug));
+// console.log('typeof debug=' + (typeof debug));
 if (debug) console.log('start /js/restaurant.js');
 
 /**
  * Initialize Google map, called from HTML.
  */
 window.initMap = () => {
-    //console.log('restaurant_info-initMap()');
+    if (debug) console.log('restaurant_info-initMap()');
     fetchRestaurantFromURL((error, restaurant) => {
         if (error) { // Got an error!
             console.error(error);
@@ -32,7 +32,7 @@ window.initMap = () => {
  * Get current restaurant from page URL.
  */
 fetchRestaurantFromURL = (callback) => {
-    //console.log('restaurant_info-fetchRestaurantFromURL()');
+    if (debug) console.log('restaurant_info-fetchRestaurantFromURL()');
     if (self.restaurant) { // restaurant already fetched!
         callback(null, self.restaurant)
         return;
@@ -60,7 +60,7 @@ fetchRestaurantFromURL = (callback) => {
  * Create restaurant HTML and add it to the webpage
  */
 fillRestaurantHTML = (restaurant = self.restaurant) => {
-    //console.log('restaurant_info-fillRestaurantHTML()');
+    if (debug) console.log('restaurant_info-fillRestaurantHTML()');
 
     const elmFavorite = createFavoriteHTML(restaurant);
 
@@ -128,14 +128,14 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
  * Get current reviews from page URL.
  */
 fetchReviewsFromURL = (callback) => {
-    console.log('restaurant_info-fetchReviewsFromURL()');
-    console.log('self.reviews=' + (self.reviews));
+    if (debug) console.log('restaurant_info-fetchReviewsFromURL()');
+    if (debug) console.log('self.reviews=' + (self.reviews));
     if (self.reviews) { // reviews already fetched!
         callback(null, self.reviews)
         return;
     }
     const id = getParameterByName('id');
-    console.log('id=' + (id));
+    if (debug) console.log('id=' + (id));
 
     let error;
     if (!id) { // no id found in URL
@@ -143,7 +143,7 @@ fetchReviewsFromURL = (callback) => {
         callback(error, null);
     }
     else {
-        console.log('fetchReviewsByRestaurantId()');
+        if (debug) console.log('fetchReviewsByRestaurantId()');
         DBHelper.fetchReviewsByRestaurantId(id, (error, reviews) => {
             self.reviews = reviews;
             console.log('self.reviews=' + (self.reviews));
@@ -161,7 +161,7 @@ fetchReviewsFromURL = (callback) => {
  * Create all reviews HTML and add them to the webpage.
  */
 fillReviewsHTML = (reviews = self.reviews) => {
-    console.log('restaurant_info-fillReviewsHTML()');
+    if (debug) console.log('restaurant_info-fillReviewsHTML()');
 
     const container = document.getElementById('reviews-container');
     const title = document.createElement('h2');
@@ -204,14 +204,15 @@ fillReviewsHTML = (reviews = self.reviews) => {
  * Create review HTML and add it to the webpage.
  */
 createReviewHTML = (review) => {
-    //console.log('restaurant_info-createReviewHTML()');
+    if (debug) console.log('restaurant_info-createReviewHTML()');
     const li = document.createElement('li');
     const name = document.createElement('p');
     name.innerHTML = review.name;
     li.appendChild(name);
 
     const createdAt = document.createElement('p');
-    createdAt.innerHTML = review.createdAt;
+    createdAt.innerHTML = DBHelper.formattedUnixTime(review.createdAt);
+    createdAt.title = review.createdAt;
     li.appendChild(createdAt);
 
     const rating = document.createElement('p');
@@ -229,7 +230,7 @@ createReviewHTML = (review) => {
  * Add restaurant name to the breadcrumb navigation menu
  */
 fillBreadcrumb = (restaurant = self.restaurant) => {
-    //console.log('restaurant_info-fillBreadcrumb()');
+    if (debug) console.log('restaurant_info-fillBreadcrumb()');
     const breadcrumb = document.getElementById('breadcrumb');
     const li = document.createElement('li');
     li.innerHTML = restaurant.name;
@@ -242,7 +243,7 @@ fillBreadcrumb = (restaurant = self.restaurant) => {
  * Get a parameter by name from page URL.
  */
 getParameterByName = (name, url) => {
-    //console.log('restaurant_info-getParameterByName()');
+    if (debug) console.log('restaurant_info-getParameterByName()');
     if (!url)
         url = window.location.href;
     name = name.replace(/[\[\]]/g, '\\$&');
@@ -257,6 +258,7 @@ getParameterByName = (name, url) => {
 
 function onloadListener()
 {
+    if (debug) console.log('restaurant_info-onloadListener()');
     // Get the modal
     const modal = document.getElementById('myModal');
 

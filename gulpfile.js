@@ -183,8 +183,8 @@ function scripts_sw() {
 
 function watch() {
     gulp.watch(paths.styles_app.src, styles_app);
-    gulp.watch(paths.scripts_app.src, scripts_app);
     gulp.watch(paths.scripts_sw.src, scripts_sw);
+    gulp.watch(paths.scripts_app.src, scripts_app);
     gulp.watch(paths.scripts_index.src, scripts_index);
     gulp.watch(paths.scripts_restaurant.src, scripts_restaurant);
     gulp.watch(paths.scripts_dbhelper.src, scripts_dbhelper);
@@ -294,7 +294,7 @@ gulp.task('default', (function () {
     runSequence(
         'clean_build',
         'copy_assets',
-        ['styles_app', 'scripts_app', 'scripts_sw', 'scripts_index', 'scripts_restaurant', 'scripts_dbhelper'],
+        ['styles_app', 'scripts_sw', 'scripts_dbhelper', 'scripts_app',  'scripts_index', 'scripts_restaurant'],
         'resize_images',
     );
 }));

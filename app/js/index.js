@@ -5,7 +5,7 @@ let neighborhoods,
 let map;
 let markers = [];
 
-console.log('typeof debug=' + (typeof debug));
+// console.log('typeof debug=' + (typeof debug));
 if (debug) console.log('start /js/index.js');
 
 /**
@@ -49,7 +49,7 @@ lazyLoadImages = () => {
 fetchNeighborhoods = () => {
   if (debug) console.log('main-fetchNeighborhoods()');
   DBHelper.fetchNeighborhoods((error, neighborhoods) => {
-    //console.log('main-fetchNeighborhoods-neighborhoods()');
+    if (debug) console.log('main-fetchNeighborhoods-neighborhoods()');
     if (error) { // Got an error
       console.error(error);
     } else {
@@ -182,7 +182,7 @@ fillRestaurantsHTML = (restaurants = self.restaurants) => {
  * Create restaurant HTML.
  */
 createRestaurantHTML = (restaurant) => {
-  //console.log('main-createRestaurantHTML()');
+  if (debug) console.log('main-createRestaurantHTML()');
   if ( ! restaurant)
   {
     return false;
@@ -246,7 +246,7 @@ createRestaurantHTML = (restaurant) => {
  * Add markers for current restaurants to the map.
  */
 addMarkersToMap = (restaurants = self.restaurants) => {
-  //console.log('main-addMarkersToMap()');
+  if (debug) console.log('main-addMarkersToMap()');
   restaurants.forEach(restaurant => {
     // Add marker to the map
     const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
