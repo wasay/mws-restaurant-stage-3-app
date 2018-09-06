@@ -21,7 +21,11 @@ const browserSync = require('browser-sync');
 
 const paths = {
     assets_root: {
-        src: ['app/manifest.json', 'app/**/*.html', 'app/robots.txt',],
+        src: ['app/manifest.json', 'app/robots.txt',],
+        dest: './public'
+    },
+    html_files: {
+        src: 'app/**/*.html',
         dest: './public'
     },
     placeholder: {
@@ -112,8 +116,15 @@ function copy_assets() {
             .pipe(gulp.dest(paths.images_static.dest)),
 
         gulp.src(paths.scripts_lib.src, {sourcemaps: false})
-                .pipe(gulp.dest(paths.scripts_lib.dest))
+            .pipe(gulp.dest(paths.scripts_lib.dest))
     );
+}
+
+function copy_html() {
+
+    return gulp.src(paths.html_files.src)
+        //.pipe(uglify())
+        .pipe(gulp.dest(paths.html_files.dest));
 }
 
 /*
@@ -182,6 +193,7 @@ function scripts_sw() {
 }
 
 function watch() {
+    gulp.watch(paths.html_files.src, copy_html);
     gulp.watch(paths.styles_app.src, styles_app);
     gulp.watch(paths.scripts_sw.src, scripts_sw);
     gulp.watch(paths.scripts_app.src, scripts_app);
@@ -198,7 +210,7 @@ function watch() {
 exports.clean_build = clean_build;
 // exports.placeholder = placeholder;
 // exports.clean_placeholder = clean_placeholder;
-// exports.copy_html = copy_html;
+exports.copy_html = copy_html;
 // exports.copy_manifest = copy_manifest;
 exports.copy_assets = copy_assets;
 // exports.copy_images = copy_images;
@@ -244,6 +256,9 @@ gulp.task('resize_images', resizeImageTasks);
 
 gulp.task('clean_build', function () {
     return clean_build();
+});
+gulp.task('copy_html', function () {
+    return copy_html();
 });
 gulp.task('copy_assets', function () {
     return copy_assets();
@@ -293,8 +308,8 @@ gulp.task('browserSync', function () {
 gulp.task('default', (function () {
     runSequence(
         'clean_build',
-        'copy_assets',
-        ['styles_app', 'scripts_sw', 'scripts_dbhelper', 'scripts_app',  'scripts_index', 'scripts_restaurant'],
+        ['copy_assets', 'copy_html'],
+        ['styles_app', 'scripts_sw', 'scripts_dbhelper', 'scripts_app', 'scripts_index', 'scripts_restaurant'],
         'resize_images',
     );
 }));

@@ -4,7 +4,7 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/importScripts
 self.importScripts('js/idb.js');
 
-let debug = false;
+let debug = true;
 if (debug) console.log('start /sw.js');
 
 self.importScripts('js/dbhelper.min.js');
@@ -44,25 +44,28 @@ self.addEventListener('fetch', function (event) {
     if (debug) console.log('location.origin=' + location.origin);
 
     if (requestUrl.port === '1337') {
-        if (DBHelper.dbPromise && DBHelper.dbPromise.db && DBHelper.dbPromise.db.transaction.objectStore('restaurants')) {
-            const jsonResult = serveJSON(requestUrl);
-            if (jsonResult) {
-                return jsonResult;
-            }
+        //if (DBHelper.dbPromise && DBHelper.dbPromise.db && DBHelper.dbPromise.db.transaction.objectStore('restaurants')) {
+        if (debug) console.log('return-serveJSON');
+        const jsonResult = serveJSON(requestUrl);
+        if (jsonResult) {
+            return jsonResult;
         }
+        //}
     } else if (requestUrl.origin === location.origin) {
         if (debug) console.log('requestUrl.pathname=' + requestUrl.pathname);
         if (requestUrl.pathname === '' || requestUrl.pathname === '/') {
+            if (debug) console.log('respondWith-caches.match');
             event.respondWith(caches.match('/index.html'));
             return;
         }
         if (requestUrl.pathname.startsWith('img/') || requestUrl.pathname.startsWith('/img/')) {
+            if (debug) console.log('respondWith-servePhoto');
             event.respondWith(servePhoto(event.request));
             return;
         }
     }
-    if (debug) console.log('other');
 
+    if (debug) console.log('respondWith-serveRequest');
     event.respondWith(serveRequest(event.request));
 });
 
@@ -106,28 +109,42 @@ function serveRequest(request) {
 
     let storageUrl = request.url;
 
-    return caches.open(staticCacheName).then(function (cache) {
+    if (debug) console.log('request.method=' + request.method);
+    if (request.method === 'GET') {
+        // cache only get requests
+        return caches.open(staticCacheName).then(function (cache) {
 
-        return cache.match(storageUrl).then(function (response) {
-            if (debug) console.log('cache match check');
-            if (response) return response;
+            return cache.match(storageUrl).then(function (response) {
+                if (debug) console.log('cache match check');
+                if (response) return response;
 
-            if (debug) console.log('fetch request.url=' + request.url);
-            return fetch(request).then(function (networkResponse) {
-                if (debug) console.log('response cache');
-                cache.put(storageUrl, networkResponse.clone());
-                return networkResponse;
-            }).catch(error => {
-                // Oops!. Got an error from server.
-                error.message = `Request failed serve request. Returned status of ${error.message}`;
-                if (debug) console.log('404 return index.html');
-                return caches.match('/404.html');
+                if (debug) console.log('fetch request.url=' + request.url);
+                return fetch(request).then(function (networkResponse) {
+                    if (debug) console.log('add network response to cache and return network response');
+                    cache.put(storageUrl, networkResponse.clone());
+                    return networkResponse;
+                }).catch(error => {
+                    // Oops!. Got an error from server.
+                    error.message = `Request failed serve request. Returned status of ${error.message}`;
+                    if (debug) console.log('404 return index.html');
+                    return caches.match('/404.html');
+                });
             });
+        }).catch(error => {
+            // Oops!. Got an error from server.
+            error.message = `Request failed serve request. Returned status of ${error.message}`;
+            throw error;
         });
+    }
+
+    return fetch(request).then(function (networkResponse) {
+        if (debug) console.log('post method return network response');
+        return networkResponse;
     }).catch(error => {
         // Oops!. Got an error from server.
         error.message = `Request failed serve request. Returned status of ${error.message}`;
-        throw error;
+        if (debug) console.log('404 return index.html');
+        return caches.match('/404.html');
     });
 }
 

@@ -99,7 +99,8 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
         fillRestaurantHoursHTML();
     }
     // fill reviews
-    fetchReviewsFromURL((error, restaurant) => {});
+    fetchReviewsFromURL((error, restaurant) => {
+    });
 };
 
 /**
@@ -170,7 +171,8 @@ fillReviewsHTML = (reviews = self.reviews) => {
     const addReviewButton = document.createElement('a');
     addReviewButton.id = 'addReview';
     addReviewButton.className = 'add-review';
-    addReviewButton.onclick = (event) => {};
+    addReviewButton.onclick = (event) => {
+    };
     addReviewButton.innerHTML = 'Add Review';
 
     // https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/ARIA_Techniques/Using_the_alert_role
@@ -256,33 +258,87 @@ getParameterByName = (name, url) => {
     return decodeURIComponent(results[2].replace(/\+/g, ' '));
 };
 
-function onloadListener()
-{
-    if (debug) console.log('restaurant_info-onloadListener()');
+function onBodyLoadListener() {
+    if (debug) console.log('restaurant_info-onBodyLoadListener()');
     // Get the modal
     const modal = document.getElementById('myModal');
 
     // Get the button that opens the modal
     const btn = document.getElementById("addReview");
 
-    // When the user clicks on the button, open the modal
-    btn.onclick = function() {
-        modal.style.display = "block";
-    };
+    if (btn) {
+        // When the user clicks on the button, open the modal
+        btn.onclick = function () {
+            modal.style.display = "block";
+        };
+    }
 
     // Get the <span> element that closes the modal
-    const modalClose = document.getElementsByClassName("close")[0];
+    const modalCloseSpan = document.getElementsByClassName("close")[0];
 
-    // When the user clicks on <span> (x), close the modal
-    modalClose.onclick = function() {
-        modal.style.display = "none";
-    };
+    if (modalCloseSpan) {
+        // When the user clicks on <span> (x), close the modal
+        modalCloseSpan.onclick = function () {
+            modal.style.display = "none";
+        };
+    }
+
+    // Get the <button> element that closes the modal
+    const modalReviewClose = document.getElementsByClassName("review-modal-close")[0];
+
+    if (modalReviewClose) {
+        // When the user clicks on <button>, close the modal
+        modalReviewClose.onclick = function () {
+            modal.style.display = "none";
+        };
+    }
+
+    // Get the <button> element that closes the modal
+    const modalReviewSubmit = document.getElementsByClassName("review-modal-submit")[0];
+
+    if (modalReviewSubmit) {
+        // When the user clicks on <button>, close the modal
+        modalReviewSubmit.onclick = function () {
+            modalReviewSubmit.onclick = null;
+            modalReviewSubmit.innerHTML = 'Wait...';
+            saveNewReview((error, result) => {
+                //if (result) alert('result=' + (result));
+            });
+                alert('Review saved!');
+        };
+    }
 
     // When the user clicks anywhere outside of the modal, close it
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         if (event.target == modal) {
             modal.style.display = "none";
         }
     }
 }
+
+function saveNewReview(callback) {
+    debug = true;
+    const restaurant_id = getParameterByName('id', document.location.href);
+    if (debug) console.log('restaurant_id=' + (restaurant_id));
+    const name = document.getElementById('d_name').value;
+    const ratingObj = document.getElementById("d_rating");
+    const rating = ratingObj.options[ratingObj.selectedIndex].value;
+    const comment = document.getElementById('d_comment').value;
+
+    const review = {
+        id: '',
+        restaurant_id: restaurant_id,
+        name: name,
+        rating: rating,
+        comment: comment,
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+    };
+    DBHelper.addUpdateReviewById(review, (error, result) => {
+        if (error) return callback(error, null);
+        return callback(null, result);
+    });
+
+}
+
 if (debug) console.log('end /js/restaurant.js');
