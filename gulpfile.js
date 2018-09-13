@@ -15,10 +15,18 @@ const es = require('event-stream');
 const uglifyes = require('uglify-es');
 const uglify = composer(uglifyes, console);
 const browserSync = require('browser-sync');
+const sourcemaps = require('gulp-sourcemaps');
+const util = require('gulp-util');
 
+const htmlmin = require('gulp-htmlmin');
+
+var config = {
+    assetsDir: 'app/Resources/assets',
+    sassPattern: 'sass/**/*.scss',
+    production: !!util.env.production
+};
 
 //https://andy-carter.com/blog/a-beginners-guide-to-the-task-runner-gulp
-
 const paths = {
     assets_root: {
         src: ['app/manifest.json', 'app/robots.txt',],
@@ -51,30 +59,35 @@ const paths = {
     scripts_sw: {
         src: ['app/sw.js'],
         saveas: 'sw.js',
-        dest: 'public/'
+        dest: 'public/',
+        sourcemaps: ''
     },
     scripts_app: {
         src: ['app/js/**/*.js', '!./app/js/index.js', '!app/js/restaurant.js'],
         saveas: 'app.min.js',
-        dest: 'public/js/'
+        dest: 'public/js/',
+        sourcemaps: ''
     },
     scripts_index: {
         src: ['app/js/index.js'],
         saveas: 'index.min.js',
-        dest: 'public/js/'
+        dest: 'public/js/',
+        sourcemaps: ''
     },
     scripts_restaurant: {
         src: ['./app/js/restaurant.js'],
         saveas: 'restaurant.min.js',
-        dest: 'public/js/'
+        dest: 'public/js/',
+        sourcemaps: ''
     },
     scripts_dbhelper: {
         src: ['app/lib/dbhelper.js'],
         saveas: 'dbhelper.min.js',
-        dest: 'public/js/'
+        dest: 'public/js/',
+        sourcemaps: ''
     },
     scripts_lib: {
-        src: ['node_modules/idb/lib/idb.js', 'node_modules/@fortawesome/fontawesome-free/js/all.js'],
+        src: ['node_modules/idb/lib/idb.js', 'node_modules/@fortawesome/fontawesome-free/js/regular.js', 'node_modules/@fortawesome/fontawesome-free/js/fontawesome.js'],
         dest: 'public/js/'
     }
 };
@@ -115,7 +128,10 @@ function copy_assets() {
         gulp.src(paths.images_static.src)
             .pipe(gulp.dest(paths.images_static.dest)),
 
-        gulp.src(paths.scripts_lib.src, {sourcemaps: false})
+        gulp.src(paths.scripts_lib.src)
+            .pipe(config.production ? util.noop() : sourcemaps.init())
+            .pipe(config.production ? uglify() : util.noop())
+            .pipe(config.production ? util.noop() : sourcemaps.write(paths.scripts_lib.sourcemaps))
             .pipe(gulp.dest(paths.scripts_lib.dest))
     );
 }
@@ -123,7 +139,10 @@ function copy_assets() {
 function copy_html() {
 
     return gulp.src(paths.html_files.src)
-        //.pipe(uglify())
+        .pipe(htmlmin({
+          collapseWhitespace: config.production,
+          removeComments: config.production
+        }))
         .pipe(gulp.dest(paths.html_files.dest));
 }
 
@@ -148,47 +167,57 @@ function styles_app() {
 
 function scripts_app() {
 
-    gulp.src(paths.scripts_app.src, {sourcemaps: false})
+    gulp.src(paths.scripts_app.src)
         .pipe(babel())
         .pipe(concat(paths.scripts_app.saveas))
-        //.pipe(uglify())
+        .pipe(config.production ? util.noop() : sourcemaps.init())
+        .pipe(config.production ? uglify() : util.noop())
+            .pipe(config.production ? util.noop() : sourcemaps.write(paths.scripts_app.sourcemaps))
         .pipe(gulp.dest(paths.scripts_app.dest));
 }
 
 function scripts_index() {
 
-    gulp.src(paths.scripts_index.src, {sourcemaps: false})
+    gulp.src(paths.scripts_index.src)
         .pipe(babel())
         .pipe(concat(paths.scripts_index.saveas))
-        //.pipe(uglify())
+        .pipe(config.production ? util.noop() : sourcemaps.init())
+        .pipe(config.production ? uglify() : util.noop())
+            .pipe(config.production ? util.noop() : sourcemaps.write(paths.scripts_index.sourcemaps))
         .pipe(gulp.dest(paths.scripts_index.dest));
 }
 
 function scripts_restaurant() {
 
-    return gulp.src(paths.scripts_restaurant.src, {sourcemaps: false})
+    return gulp.src(paths.scripts_restaurant.src)
         .pipe(babel())
         .pipe(concat(paths.scripts_restaurant.saveas))
-        //.pipe(uglify())
+        .pipe(config.production ? util.noop() : sourcemaps.init())
+        .pipe(config.production ? uglify() : util.noop())
+            .pipe(config.production ? util.noop() : sourcemaps.write(paths.scripts_restaurant.sourcemaps))
         .pipe(gulp.dest(paths.scripts_restaurant.dest));
 
 }
 
 function scripts_dbhelper() {
 
-    return gulp.src(paths.scripts_dbhelper.src, {sourcemaps: false})
+    return gulp.src(paths.scripts_dbhelper.src)
         .pipe(babel())
         .pipe(concat(paths.scripts_dbhelper.saveas))
-        //.pipe(uglify())
+        .pipe(config.production ? util.noop() : sourcemaps.init())
+        .pipe(config.production ? uglify() : util.noop())
+            .pipe(config.production ? util.noop() : sourcemaps.write(paths.scripts_dbhelper.sourcemaps))
         .pipe(gulp.dest(paths.scripts_dbhelper.dest));
 }
 
 function scripts_sw() {
 
-    return gulp.src(paths.scripts_sw.src, {sourcemaps: false})
+    return gulp.src(paths.scripts_sw.src)
         .pipe(babel())
         .pipe(concat(paths.scripts_sw.saveas))
-        //.pipe(uglify())
+        .pipe(config.production ? util.noop() : sourcemaps.init())
+        .pipe(config.production ? uglify() : util.noop())
+            .pipe(config.production ? util.noop() : sourcemaps.write(paths.scripts_sw.sourcemaps))
         .pipe(gulp.dest(paths.scripts_sw.dest));
 }
 

@@ -2,9 +2,10 @@
 1. Run API server project in command line `npm start`
 2. Confirm the URL `http://localhost:1337/restaurants` returns results
 3. For this project, in command window
-4. cd into public folder `cd public`
-5. Run local server `python -m SimpleHTTPServer 8000`
-10. Browser the website at `http://localhost:8000`
+4. (if gulp run is needed? gulp --production OR gulp OR gulp watch)
+5. cd into public folder `cd public`
+6. Run local server `python -m SimpleHTTPServer 8000`
+7. Browser the website at `http://localhost:8000`
 
 
 

@@ -354,10 +354,14 @@ nav h1 a {
 
 }
 .is-favorite {
-    color: red !important;
+    color: #ffffff !important;
+    background-color:red !important;
+    padding:2px !important;
 }
 .not-favorite {
-    color: grey !important;
+    color: #ffffff !important;
+    background-color:grey !important;
+    padding:2px !important;
 }
 
 .add-review
