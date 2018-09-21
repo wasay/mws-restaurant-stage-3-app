@@ -20,9 +20,9 @@ const util = require('gulp-util');
 
 const htmlmin = require('gulp-htmlmin');
 
-var config = {
-    assetsDir: 'app/Resources/assets',
-    sassPattern: 'sass/**/*.scss',
+const config = {
+    //assetsDir: 'app/Resources/assets',
+    //sassPattern: 'sass/**/*.scss',
     production: !!util.env.production
 };
 
@@ -64,7 +64,7 @@ const paths = {
     },
     scripts_app: {
         src: ['app/js/**/*.js', '!./app/js/index.js', '!app/js/restaurant.js'],
-        saveas: 'app.min.js',
+        saveas: 'main.min.js',
         dest: 'public/js/',
         sourcemaps: ''
     },
@@ -159,7 +159,7 @@ function styles_app() {
         }))
         //pass in options to the stream
         .pipe(rename({
-            basename: 'app',
+            basename: 'main',
             suffix: '.min'
         }))
         .pipe(gulp.dest(paths.styles_app.dest));

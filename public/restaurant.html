@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="theme-color" content="#fdfdfd">
 
     <meta name="description" content="Restaurant Info by Restaurant Reviews App">
     <!-- Normalize.css for better cross-browser consistency -->
-    <link async rel="stylesheet" src="//normalize-css.googlecode.com/svn/trunk/normalize.css"/>
+    <link async rel="stylesheet" src="//normalize-css.googlecode.com/svn/trunk/normalize.css">
     <!-- Main CSS file -->
-    <link rel="stylesheet" href="css/app.min.css" type="text/css">
+    <link rel="stylesheet" href="css/main.min.css" type="text/css">
     <link rel="icon" href="img/icons/icon.png">
     <link rel="manifest" href="/manifest.json">
     <title>Restaurant Info</title>
 </head>
 
-<body onload="onloadListener();">
+<body>
 <div class="container">
     <div class="inside">
         <!-- Beginning header -->
@@ -69,46 +69,16 @@
 </div>
 
 <!-- Beginning scripts -->
-<!-- library -->
+<!-- idb library -->
 <script type="application/javascript" charset="utf-8" src="js/idb.js"></script>
-<script type="application/javascript" charset="utf-8" src="js/all.js"></script>
-    <!-- Main javascript file -->
-    <script type="application/javascript" charset="utf-8" src="js/app.min.js"></script>
 <!-- Database helpers -->
 <script type="application/javascript" charset="utf-8" src="js/dbhelper.min.js"></script>
-<!-- Page javascript file -->
+<!-- Main javascript file -->
 <script type="application/javascript" charset="utf-8" src="js/restaurant.min.js"></script>
 <!-- Google Maps -->
-<script async defer
-        src="https://maps.googleapis.com/maps/api/js?key={API_KEY}&libraries=places&callback=initMap"></script>
+<script async defer="defer" src="https://maps.googleapis.com/maps/api/js?key={API_KEY}&libraries=places&callback=initMap"></script>
 <!-- End scripts -->
 
-<!-- The Modal -->
-<div id="myModal" class="modal">
-<!-- Modal content -->
-    <div class="modal-content">
-      <div class="modal-header">
-        <span class="close">&times;</span>
-        <h2>Modal Header</h2>
-      </div>
-      <div class="modal-body">
-        <label>Name:
-        <input name="name" id='d_name' type="text" value=""></label><br>
-        <br>
-        <label>Rating: <select name="rating">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        </select></label>
-        <label>Comment:<textarea name="comment" id="d_comment"></textarea></label>
-      </div>
-      <div class="modal-footer">
-        <h3>Modal Footer</h3>
-      </div>
-    </div>
-</div>
 </body>
 
 </html>

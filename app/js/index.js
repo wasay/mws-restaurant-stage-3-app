@@ -5,244 +5,246 @@ let neighborhoods,
 let map;
 let markers = [];
 
-// console.log('typeof debug=' + (typeof debug));
-if (debug) console.log('start /js/index.js');
-
 /**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
  */
 document.addEventListener('DOMContentLoaded', (event) => {
-    if (debug) console.log('index-DOMContentLoaded()');
-    dbPromise.then(() => {
-        fetchNeighborhoods();
-        return true;
-    }).then(() => {
-        fetchCuisines();
-        return true;
-    });
+  //console.log('main-DOMContentLoaded()');
+  fetchNeighborhoods();
+  fetchCuisines();
+  lazyLoadImages();
 });
+
+
+lazyLoadImages = () => {
+  let lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target;
+          lazyImage.src = lazyImage.dataset.src;
+          lazyImage.srcset = lazyImage.dataset.srcset;
+          lazyImage.classList.remove("lazy");
+          lazyImageObserver.unobserve(lazyImage);
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage);
+    });
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+};
 
 /**
  * Fetch all neighborhoods and set their HTML.
  */
 fetchNeighborhoods = () => {
-    if (debug) console.log('index-fetchNeighborhoods()');
-    DBHelper.fetchNeighborhoods((error, neighborhoods) => {
-        if (debug) console.log('index-fetchNeighborhoods-neighborhoods()');
-        if (error) { // Got an error
-            console.error(error);
-        }
-        else if (neighborhoods) {
-            self.neighborhoods = neighborhoods;
-            fillNeighborhoodsHTML();
-        }
-    });
+  //console.log('main-fetchNeighborhoods()');
+  DBHelper.fetchNeighborhoods((error, neighborhoods) => {
+    //console.log('main-fetchNeighborhoods-neighborhoods()');
+    if (error) { // Got an error
+      console.error(error);
+    } else {
+      self.neighborhoods = neighborhoods;
+      fillNeighborhoodsHTML();
+    }
+  });
 };
 
 /**
  * Set neighborhoods HTML.
  */
 fillNeighborhoodsHTML = (neighborhoods = self.neighborhoods) => {
-    if (debug) console.log('index-fillNeighborhoodsHTML()');
-    const select = document.getElementById('neighborhoods-select');
-    neighborhoods.forEach(neighborhood => {
-        const option = document.createElement('option');
-        option.innerHTML = neighborhood;
-        option.value = neighborhood;
-        select.append(option);
-    });
+  //console.log('main-fillNeighborhoodsHTML()');
+  const select = document.getElementById('neighborhoods-select');
+  neighborhoods.forEach(neighborhood => {
+    const option = document.createElement('option');
+    option.innerHTML = neighborhood;
+    option.value = neighborhood;
+    select.append(option);
+  });
 };
 
 /**
  * Fetch all cuisines and set their HTML.
  */
 fetchCuisines = () => {
-    if (debug) console.log('index-fetchCuisines()');
-    DBHelper.fetchCuisines((error, cuisines) => {
-        if (error) { // Got an error!
-            console.error(error);
-        }
-        else {
-            self.cuisines = cuisines;
-            fillCuisinesHTML();
-        }
-    });
+  //console.log('main-fetchCuisines()');
+  DBHelper.fetchCuisines((error, cuisines) => {
+    if (error) { // Got an error!
+      console.error(error);
+    } else {
+      self.cuisines = cuisines;
+      fillCuisinesHTML();
+    }
+  });
 };
 
 /**
  * Set cuisines HTML.
  */
 fillCuisinesHTML = (cuisines = self.cuisines) => {
-    if (debug) console.log('index-fillCuisinesHTML()');
-    const select = document.getElementById('cuisines-select');
+  //console.log('main-fillCuisinesHTML()');
+  const select = document.getElementById('cuisines-select');
 
-    cuisines.forEach(cuisine => {
-        const option = document.createElement('option');
-        option.innerHTML = cuisine;
-        option.value = cuisine;
-        select.append(option);
-    });
+  cuisines.forEach(cuisine => {
+    const option = document.createElement('option');
+    option.innerHTML = cuisine;
+    option.value = cuisine;
+    select.append(option);
+  });
 };
 
 /**
  * Initialize Google map, called from HTML.
  */
 window.initMap = () => {
-    if (debug) console.log('index-initMap()');
-    let loc = {
-        lat: 40.722216,
-        lng: -73.987501
-    };
-    try {
-        self.map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 12,
-            center: loc,
-            scrollwheel: false
-        });
-    }
-    catch (ex) {
-        console.log('Unable to initialize google maps')
-    }
-    dbPromise.then(() => {
-        updateRestaurants();
-    });
+  //console.log('main-initMap()');
+  let loc = {
+    lat: 40.722216,
+    lng: -73.987501
+  };
+  self.map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 12,
+    center: loc,
+    scrollwheel: false
+  });
+  updateRestaurants();
 };
 
 /**
  * Update page and map for current restaurants.
  */
 updateRestaurants = () => {
-    if (debug) console.log('index-updateRestaurants()');
-    const cSelect = document.getElementById('cuisines-select');
-    const nSelect = document.getElementById('neighborhoods-select');
+  //console.log('main-updateRestaurants()');
+  const cSelect = document.getElementById('cuisines-select');
+  const nSelect = document.getElementById('neighborhoods-select');
 
-    const cIndex = cSelect.selectedIndex;
-    const nIndex = nSelect.selectedIndex;
+  const cIndex = cSelect.selectedIndex;
+  const nIndex = nSelect.selectedIndex;
 
-    const cuisine = cSelect[cIndex].value;
-    const neighborhood = nSelect[nIndex].value;
+  const cuisine = cSelect[cIndex].value;
+  const neighborhood = nSelect[nIndex].value;
 
-    DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
-        if (error || !restaurants) { // Got an error!
-            console.error(error);
-        }
-        return restaurants;
-    }).then(restaurants => {
-        if (debug) console.log('index-updateRestaurants()-fetchRestaurantByCuisineAndNeighborhood()-restaurants' + (restaurants));
-        resetRestaurants(restaurants);
-    }).then(() => {
-        fillRestaurantsHTML();
-    });
+  DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
+    if (error) { // Got an error!
+      console.error(error);
+    } else {
+      resetRestaurants(restaurants);
+      fillRestaurantsHTML();
+    }
+  })
 };
 
 /**
  * Clear current restaurants, their HTML and remove their map markers.
  */
 resetRestaurants = (restaurants) => {
-    if (debug) console.log('index-resetRestaurants()');
-    if (debug) console.log('index-resetRestaurants()-restaurants' + (restaurants));
-    // Remove all restaurants
-    self.restaurants = [];
-    const ul = document.getElementById('restaurants-list');
-    ul.innerHTML = '';
+  //console.log('main-resetRestaurants()');
+  // Remove all restaurants
+  self.restaurants = [];
+  const ul = document.getElementById('restaurants-list');
+  ul.innerHTML = '';
 
-    // Remove all map markers
-    if (typeof self.markers != 'undefined' && self.markers != 'undefined') {
-        self.markers.forEach(m => m.setMap(null));
-    }
-    self.markers = [];
-    self.restaurants = restaurants;
+  // Remove all map markers
+  if (typeof self.markers != 'undefined' && self.markers != 'undefined')
+  {
+      self.markers.forEach(m => m.setMap(null));
+  }
+  self.markers = [];
+  self.restaurants = restaurants;
 };
 
 /**
  * Create all restaurants HTML and add them to the webpage.
  */
 fillRestaurantsHTML = (restaurants = self.restaurants) => {
-    if (debug) console.log('index-fillRestaurantsHTML()');
-
-    if (!restaurants) return;
-
-    const ul = document.getElementById('restaurants-list');
-    restaurants.forEach(restaurant => {
-        ul.append(createRestaurantHTML(restaurant));
-    });
-    addMarkersToMap();
+  //console.log('main-fillRestaurantsHTML()');
+  const ul = document.getElementById('restaurants-list');
+  restaurants.forEach(restaurant => {
+    ul.append(createRestaurantHTML(restaurant));
+  });
+  addMarkersToMap();
 };
 
 /**
  * Create restaurant HTML.
  */
 createRestaurantHTML = (restaurant) => {
-    if (debug) console.log('index-createRestaurantHTML()');
-    if (!restaurant) {
-        return false;
-    }
-    const li = document.createElement('li');
+  //console.log('main-createRestaurantHTML()');
+  if ( ! restaurant)
+  {
+    return false;
+  }
+  const li = document.createElement('li');
 
-    const img = DBHelper.imageUrlForRestaurant(restaurant);
+  const img = DBHelper.imageUrlForRestaurant(restaurant);
 
-    const image = document.createElement('img');
-    if (img) {
-        img_parts = img.split('/');
+  const image = document.createElement('img');
+  if (img)
+  {
+    img_parts = img.split('/');
 
-        image.className = 'restaurant-img lazy';
-        image.src = img_parts[0] + '/320/' + img_parts[1];
-        //https://developers.google.com/web/fundamentals/performance/lazy-loading-guidance/images-and-video/
-        //https://stackoverflow.com/questions/16449445/how-can-i-set-image-source-with-base64
-        image.setAttribute('data-sizes', 'auto');
-        image.setAttribute('data-src', img_parts[0] + '/320/' + img_parts[1]);
-        image.setAttribute('data-srcset', '' + img_parts[0] + '/320/' + img_parts[1] + ' 300w,' + img_parts[0] + '/640/' + img_parts[1] + ' 600w,' + img_parts[0] + '/1024/' + img_parts[1] + ' 1000w,' + img_parts[0] + '/1600/' + img_parts[1] + ' 1600w');
-        image.alt = restaurant.name;
-    }
-    else {
-        image.src = 'img/placeholder.png';
-        image.alt = '';
-    }
-    li.append(image);
+    image.className = 'restaurant-img lazy';
+    image.src = img_parts[0] + '/320/' + img_parts[1];
+    //https://developers.google.com/web/fundamentals/performance/lazy-loading-guidance/images-and-video/
+    //https://stackoverflow.com/questions/16449445/how-can-i-set-image-source-with-base64
+    image.setAttribute('data-sizes', 'auto');
+    image.setAttribute('data-src', img_parts[0] + '/320/' + img_parts[1]);
+    image.setAttribute('data-srcset', '' + img_parts[0] + '/320/' + img_parts[1] + ' 300w,' + img_parts[0] + '/640/' + img_parts[1] + ' 600w,' + img_parts[0] + '/1024/' + img_parts[1] + ' 1000w,' + img_parts[0] + '/1600/' + img_parts[1] + ' 1600w');
+    image.alt = restaurant.name;
+  }
+  else
+  {
+    image.src = 'img/placeholder.png';
+    image.alt = '';
+  }
+  li.append(image);
 
-    const elmFavorite = createFavoriteHTML(restaurant);
+  const name = document.createElement('h1');
+  name.innerHTML = restaurant.name;
+  li.append(name);
 
-    const name = document.createElement('h1');
-    name.innerHTML = restaurant.name + '&nbsp;';
-    name.append(elmFavorite);
-    li.append(name);
+  const neighborhood = document.createElement('p');
+  neighborhood.innerHTML = restaurant.neighborhood;
+  li.append(neighborhood);
 
-    const neighborhood = document.createElement('p');
-    neighborhood.innerHTML = restaurant.neighborhood;
-    li.append(neighborhood);
+  const address = document.createElement('p');
+  address.innerHTML = restaurant.address;
+  li.append(address);
 
-    const address = document.createElement('p');
-    address.innerHTML = restaurant.address;
-    li.append(address);
+  const more = document.createElement('a');
+  more.innerHTML = 'View Details';
+  more.href = DBHelper.urlForRestaurant(restaurant);
 
-    const more = document.createElement('a');
-    more.innerHTML = 'View Details';
-    more.href = DBHelper.urlForRestaurant(restaurant);
+  // https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/ARIA_Techniques/Using_the_alert_role
+  more.setAttribute("role", "button");
+  more.setAttribute("tabindex", "0");
+  more.setAttribute("aria-pressed", "false");
+  more.setAttribute("aria-label", restaurant.name);
 
-    // https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/ARIA_Techniques/Using_the_alert_role
-    more.setAttribute("role", "button");
-    more.setAttribute("tabindex", "0");
-    more.setAttribute("aria-pressed", "false");
-    more.setAttribute("aria-label", restaurant.name);
+  li.append(more);
 
-    li.append(more);
-
-    return li
+  return li
 };
 
 /**
  * Add markers for current restaurants to the map.
  */
 addMarkersToMap = (restaurants = self.restaurants) => {
-    if (debug) console.log('index-addMarkersToMap()');
-    restaurants.forEach(restaurant => {
-        // Add marker to the map
-        const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
-        google.maps.event.addListener(marker, 'click', () => {
-            window.location.href = marker.url
-        });
-        self.markers.push(marker);
+  //console.log('main-addMarkersToMap()');
+  restaurants.forEach(restaurant => {
+    // Add marker to the map
+    const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
+    google.maps.event.addListener(marker, 'click', () => {
+      window.location.href = marker.url
     });
+    self.markers.push(marker);
+  });
 };
 
-if (debug) console.log('end /js/index.js');
