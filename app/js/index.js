@@ -12,8 +12,15 @@ let markers = [];
  */
 document.addEventListener('DOMContentLoaded', (event) => {
     //console.log('main-DOMContentLoaded()');
-    fetchNeighborhoods();
-    fetchCuisines();
+    dbPromise
+    .then(() => {
+        fetchNeighborhoods();
+        return true;
+    })
+    .then(() => {
+        fetchCuisines();
+        return true;
+    });
     lazyLoadImages();
 });
 
