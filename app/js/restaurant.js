@@ -15,7 +15,7 @@ window.initMap = () => {
         if (error) { // Got an error!
             console.error(error);
         }
-        else {
+        else if (restaurant) {
             self.map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 16,
                 center: restaurant.latlng,
@@ -23,6 +23,10 @@ window.initMap = () => {
             });
             fillBreadcrumb();
             DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
+        }
+        else
+        {
+            console.error('Unable to retrive restaurant info');
         }
     });
 };
@@ -44,12 +48,17 @@ fetchRestaurantFromURL = (callback) => {
         callback(error, null);
     }
     else {
-        DBHelper.fetchRestaurantById(id, (error, restaurant) => {
+        DBHelper.getRestaurantById(id, (error, restaurant) => {
+            if (error) {
+	    	console.log(error);
+		return;
+	    }
+	    
+	    if (!restaurant) {
+	        return;
+	    }
+
             self.restaurant = restaurant;
-            if (!restaurant) {
-                console.error(error);
-                return;
-            }
             fillRestaurantHTML();
             callback(null, restaurant)
         });
@@ -60,6 +69,10 @@ fetchRestaurantFromURL = (callback) => {
  * Create restaurant HTML and add it to the webpage
  */
 fillRestaurantHTML = (restaurant = self.restaurant) => {
+    if (!restaurant) {
+        return;
+    }
+
     if (debug) console.log('restaurant-fillRestaurantHTML()');
     const elmFavorite = createFavoriteHTML(restaurant);
 
@@ -126,8 +139,10 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
  * Create all reviews HTML and add them to the webpage.
  */
 fillReviewsHTML = (reviews = self.restaurant.reviews) => {
+    debug = true;
     if (debug) console.log('restaurant-fillReviewsHTML()');
-    if (debug) console.log('restaurant-fillReviewsHTML()-reviews=' + (reviews));
+    if (debug) console.log('restaurant-fillReviewsHTML()-reviews.restaurant_id=' + (reviews.restaurant_id));
+
     const container = document.getElementById('reviews-container');
     const title = document.createElement('h2');
     title.innerHTML = 'Reviews';
@@ -160,13 +175,41 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
         return;
     }
     const ul = document.getElementById('reviews-list');
-    // reviews.forEach(review => {
-    //     ul.appendChild(createReviewHTML(review));
-    // });
-    for (let i=0; i<=reviews.length; i++) {
-        ul.appendChild(createReviewHTML(reviews[i]));
-    }
+
+
+/*
+    let restaurant_reviews = reviews;
+    if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
+    if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first - results =' + (restaurant_reviews));
+
+    dbPromise
+    .then(() => {
+        if (!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0) {
+            if (debug) console.log('restaurant-fillReviewsHTML()-getReviewsByRestaurantId()');
+            restaurant_reviews = DBHelper.getReviewsByRestaurantId(self.restaurant.restaurant_id, (error, result) => {
+                if (error) return;
+                return result;
+            })
+                .then((reviews) => reviews);
+        }
+        return restaurant_reviews;
+    })
+        .then((restaurant_reviews) => {
+            if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
+            if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second - results =' + (restaurant_reviews));
+            restaurant_reviews.forEach(review => {
+                ul.appendChild(createReviewHTML(review));
+            });
+	    // reviews.forEach(review => {
+	    //     ul.appendChild(createReviewHTML(review));
+            // });
+            // for (let i = 0; i <= reviews.length; i++) {
+            //     ul.appendChild(createReviewHTML(reviews[i]));
+            // }
+        });
+*/
     container.appendChild(ul);
+// debug = false;
 };
 
 /**
@@ -309,21 +352,29 @@ function saveNewReview(callback) {
     const name = document.getElementById('d_name').value;
     const ratingObj = document.getElementById("d_rating");
     const rating = ratingObj.options[ratingObj.selectedIndex].value;
-    const comment = document.getElementById('d_comment').value;
+    const comments = document.getElementById('d_comments').value;
 
     const review = {
         id: '',
-        restaurant_id: restaurant_id,
+        review_id: '',
+        restaurant_id: Number(restaurant_id),
         name: name,
-        rating: rating,
-        comment: comment,
-        updatedAt: Date.now(),
         createdAt: Date.now(),
+        updatedAt: Date.now(),
+        rating: Number(rating),
+        comments: comments,
     };
     DBHelper.addUpdateReviewById(review, (error, result) => {
         if (error) return callback(error, null);
-        return callback(null, result);
+        if (!result) return true;
+        return result;
     });
+
+    DBHelper.fetchReviewsByRestaurantId(restaurant_id, (error, result) => {
+        return result;
+    });
+
+    return callback(null, true);
 
 }
 
@@ -355,5 +406,67 @@ function formattedUnixTime(unix_timestamp) {
     return (month + '/' + day + '/' + year + ' ' + (hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2)).toString());
     //return (hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2));
 }
+
+function addReviewModalListener() {
+    if (debug) console.log('restaurant-addReviewModalListener()');
+    // Get the modal
+    const modal = document.getElementById('myModal');
+
+    // Get the button that opens the modal
+    const btn = document.getElementById("addReview");
+
+    if (btn) {
+        // When the user clicks on the button, open the modal
+        btn.onclick = function () {
+            modal.style.display = "block";
+        };
+    }
+
+    // Get the <span> element that closes the modal
+    const modalCloseSpan = document.getElementsByClassName("close")[0];
+
+    if (modalCloseSpan) {
+        // When the user clicks on <span> (x), close the modal
+        modalCloseSpan.onclick = function () {
+            modal.style.display = "none";
+        };
+    }
+
+    // Get the <button> element that closes the modal
+    const modalReviewClose = document.getElementsByClassName("review-modal-close")[0];
+
+    if (modalReviewClose) {
+        // When the user clicks on <button>, close the modal
+        modalReviewClose.onclick = function () {
+            modal.style.display = "none";
+        };
+    }
+
+    // Get the <button> element that closes the modal
+    const modalReviewSubmit = document.getElementsByClassName("review-modal-submit")[0];
+
+    if (modalReviewSubmit) {
+        // When the user clicks on <button>, close the modal
+        modalReviewSubmit.onclick = function () {
+            modalReviewSubmit.onclick = null;
+            modalReviewSubmit.innerHTML = 'Wait...';
+            saveNewReview((error, result) => {
+                //if (result) alert('result=' + (result));
+                if (result)
+                {
+                    window.location = window.location + '&msg=Review+saved!';
+                }
+            });
+        };
+    }
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+}
+
 
 if (debug) console.log('end /js/restaurant.js');

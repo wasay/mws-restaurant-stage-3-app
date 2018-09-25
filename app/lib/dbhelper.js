@@ -1,10 +1,10 @@
 // js/dbhelper.js
 
-let debug = true;
+let debug = false;
 if (debug) console.log('start /lib/dbhelper.js');
 
 const appPrefix = 'mws-restaurant-stage-3';
-const staticCacheName = appPrefix + '-v1';
+const staticCacheName = appPrefix + '-v2';
 const contentImgsCache = appPrefix + '-content-imgs';
 const allCaches = [
     staticCacheName,
@@ -138,6 +138,8 @@ class DBHelper {
 
     constructor() {
         this.restaurants = null;
+        this.reviews = null;
+        this.operating_hours = null;
     }
 
     static get staticCacheName() {
@@ -209,24 +211,6 @@ class DBHelper {
                 return networkResponse;
             })
             .then(response => response.json())
-            .then(restaurants => {
-                for (const key in restaurants) {
-                    restaurants[key].restaurant_id = restaurants[key].id;
-                    restaurants[key].reviews = [];
-                }
-
-                let key = 0;
-                restaurants.forEach(restaurant => {
-                    if (restaurant) {
-                        return DBHelper.fetchReviewsByRestaurantId(restaurant.restaurant_id, (error, result) => {
-                            restaurants[key].reviews = result;
-                        });
-                    }
-                    key++;
-                });
-
-                return restaurants;
-            })
             .then(jsonData => {
                 if (debug) console.log('dbhelper-fetchRestaurants()-data.length=' + (jsonData.length));
                 if (debug) console.log('dbhelper-fetchRestaurants()-data=' + (jsonData));
@@ -237,80 +221,39 @@ class DBHelper {
                 error.message = (`Request failed. Returned status of ${error.message} - dbhelper-fetchRestaurants()`);
                 return callback(error.message, null);
             });
-
-        // let restaurants = this.restaurants;
-        //
-        // return dbPromise.then(restaurants => {
-        //     if (debug) console.log('dbhelper-fetchRestaurants()-array check first=' + (!Array.isArray(restaurants) || restaurants.length === 0));
-        //     if (!Array.isArray(restaurants) || restaurants.length === 0) {
-        //         return DBHelper.getAllIndexDbRestaurants((error, restaurants) => {
-        //             if (debug) console.log('dbhelper-fetchRestaurants()-array check first-return=' + (!Array.isArray(restaurants) || restaurants.length === 0));
-        //             if (error) return callback(error.message, null);
-        //             return restaurants;
-        //         });
-        //     }
-        //     else return restaurants;
-        // })
-        //     .then(restaurants => {
-        //         if (debug) console.log('dbhelper-fetchRestaurants()-array check second=' + (!Array.isArray(restaurants) || restaurants.length === 0));
-        //         if (!Array.isArray(restaurants) || restaurants.length === 0) {
-        //             return fetch(DBHelper.DATABASE_URL_RESTAURANTS)
-        //                 .then(response => response.json())
-        //                 .then(restaurants => {
-        //                     for (const key in restaurants) {
-        //                         restaurants[key].restaurant_id = restaurants[key].id;
-        //                         restaurants[key].reviews = [];
-        //                     }
-        //
-        //                     let key = 0;
-        //                     restaurants.forEach(restaurant => {
-        //                         if (restaurant) {
-        //                             return DBHelper.fetchReviewsByRestaurantId(restaurant.restaurant_id, (error, result) => {
-        //                                 restaurants[key].reviews = result;
-        //                             });
-        //                         }
-        //                         key++;
-        //                     });
-        //
-        //                     return restaurants;
-        //                 });
-        //         }
-        //         else return restaurants;
-        //     })
-        //     .then(restaurants => {
-        //         if (debug) console.log('dbhelper-fetchRestaurants()-array check third=' + (!Array.isArray(restaurants) || restaurants.length === 0));
-        //         this.restaurants = restaurants;
-        //         if (debug) console.log('dbhelper-getAllRestaurants()-this.restaurants-end=' + (this.restaurants));
-        //         return callback(null, this.restaurants);
-        //     })
-        //     .catch(error => {
-        //         // Oops!. Got an error from server.
-        //         error.message = (`Request failed. Returned status of ${error.message}`);
-        //         return callback(error.message, null);
-        //     });
-
     }
 
     /**
      * Fetch a restaurant by its ID.
      */
     static fetchRestaurantById(id, callback) {
-        //console.log('dbhelper-fetchRestaurantById()');
+        debug = true;
+        if (debug) console.log('dbhelper-fetchRestaurantById()');
         // fetch all restaurants with proper error handling.
-        DBHelper.getAllRestaurants((error, restaurants) => {
-            if (error) {
-                callback(error, null);
-            }
-            else {
-                const restaurant = restaurants.find(r => r.restaurant_id == id);
-                if (restaurant) { // Got the restaurant
-                    callback(null, restaurant);
-                }
-                else { // Restaurant does not exist in the database
-                    callback('Restaurant does not exist', null);
-                }
-            }
-        });
+        let requestURL = DBHelper.DATABASE_URL_RESTAURANTS + '/' + id;
+        if (debug) console.log('dbhelper-fetchRestaurantById()-requestURL=' + (requestURL));
+        return fetch(requestURL, {
+            headers: {'Content-Type': 'application/json'}
+        })
+            .then(networkResponse => {
+                if (debug) console.log('dbhelper-fetchRestaurants()-networkResponse' + (networkResponse));
+                return networkResponse;
+            })
+            .then(response => response.json())
+            .then(restaurant => {
+                    restaurant.restaurant_id = restaurant.id;
+                    restaurant.operating_hours = [];
+		    restaurant.reviews = DBHelper.fetchReviewsByRestaurantId(restaurant.restaurant_id, (error, result) => {
+                        return restaurant;
+                    });
+		    return callback(null, restaurant);
+
+            })
+            .catch(error => {
+                // Oops!. Got an error from server.
+                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-fetchRestaurantById()`);
+                return callback(error.message, null);
+            });
     }
 
     /**
@@ -476,83 +419,97 @@ class DBHelper {
     static getAllIndexDbRestaurants(callback) {
         if (debug) console.log('dbhelper-getAllIndexDbRestaurants()');
 
-        return dbPromise
+        let restaurants = dbPromise
             .then(db => {
                 const txRestaurants = db.transaction('restaurants', 'readonly');
-                //if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-(typeof txRestaurants)=' + ((typeof txRestaurants)));
-
                 const restaurantsStore = txRestaurants.objectStore('restaurants');
-                //if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-(typeof restaurantsStore)=' + ((typeof restaurantsStore)));
-
                 return restaurantsStore.getAll();
             })
             .then(restaurants => {
-                if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- first - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
-
-                if (typeof restaurants !== 'undefined' && restaurants.length > 0) {
-                    if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurants.length=' + (restaurants.length));
-                    for (let restaurant of restaurants) {
-                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurant_id=' + (restaurant.restaurant_id));
-                        restaurant.id = restaurant.restaurant_id;
-                        restaurant.latlng = [];
-                        restaurant.latlng.lat = restaurant.lat;
-                        restaurant.latlng.lng = restaurant.lng;
-                        restaurant.operating_hours = [];
-                        restaurant.reviews = [];
-                    }
+                if (!(typeof restaurants !== 'undefined' && restaurants.length > 0)) {
+                    return [];
                 }
-                return restaurants;
-            })
-            .then(restaurants => {
-                if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
+            });
 
-                return dbPromise.then(db => {
-                    if (typeof restaurants !== 'undefined' && restaurants.length > 0) {
-                        const txOperatingHours = db.transaction('operating_hours', 'readonly');
-                        const operatingHoursStore = txOperatingHours.objectStore('operating_hours');
-                        operatingHoursStore.getAll()
-                            .then(all_operating_hours => {
-                                for (let restaurant of restaurants) {
-                                    if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurant_id for operating_hours=' + (restaurant.restaurant_id));
-                                    for (let restaurant of restaurants) {
-                                        const operating_hours = all_operating_hours.filter(r => r.restaurant_id == restaurant.restaurant_id);
-                                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurants.operating_hours.length=' + (operating_hours.length));
-                                        restaurant.operating_hours = operating_hours;
-                                    }
-                                }
-                            });
+        if (!(typeof restaurants !== 'undefined' && restaurants.length > 0)) {
+            const error_message = (`Request failed. Returned status of No restaurants found in idb`);
+            return;
+        }
 
-                    }
-                    return restaurants;
+        dbPromise
+            .then(db => {
+                if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- first - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
+                restaurants = restaurants.map((restaurant) => {
+                    restaurant.id = restaurant.restaurant_id;
+                    restaurant.latlng = [];
+                    restaurant.latlng.lat = restaurant.lat;
+                    restaurant.latlng.lng = restaurant.lng;
+                    restaurant.operating_hours = [];
+                    restaurant.reviews = [];
+                    return restaurant;
                 });
 
-            })
-            .then(restaurants => {
-                if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- third - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
+                if (!(typeof restaurants !== 'undefined' && restaurants.length > 0)) {
+                    const error_message = (`Request failed. Returned status of No restaurants found in idb`);
+                    return;
+                }
 
-                return dbPromise.then(db => {
-                    if (typeof restaurants !== 'undefined' && restaurants.length > 0) {
-                        for (let restaurant of restaurants) {
-                            if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurant_id for reviews=' + (restaurant.restaurant_id));
-                            const txReviews = db.transaction('reviews', 'readonly');
-                            const reviewsStore = txReviews.objectStore('reviews');
-                            reviewsStore.getAll()
-                                .then(all_reviews => {
-                                    for (let restaurant of restaurants) {
-                                        const reviews = all_reviews.filter(r => r.restaurant_id == restaurant.restaurant_id);
-                                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurants.reviews.length=' + (reviews.length));
-                                        restaurant.reviews = reviews;
+                dbPromise
+                    .then((restaurants) => {
+                        //let restaurants = this.restaurants;
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
+
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second - getAllIndexDbOperatingHours()');
+                        return DBHelper.getAllIndexDbOperatingHours((error, results) => {
+                            return results
+                                .then((allOperatingHours) => {
+                                    if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second - allOperatingHours.length=' + (allOperatingHours.length));
+                                    if (allOperatingHours.length > 0) {
+                                        this.operating_hours = allOperatingHours;
+                                        restaurants = restaurants.map((restaurant) => {
+                                            const operating_hours = allOperatingHours.filter(r => r.restaurant_id == restaurant.restaurant_id);
+                                            if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second -all_operating_hours.filter-operating_hours.length=' + (operating_hours.length));
+                                            if (operating_hours.length > 0) restaurants[i].operating_hours = operating_hours;
+                                            return restaurant;
+                                        });
                                     }
+                                    return restaurants;
                                 });
-                        }
-                    }
-                    return restaurants;
-                });
-            })
-            .then(restaurants => {
-                if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- fourth - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
+                        });
+                    })
+                    .then(restaurants => {
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- third - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
 
-                callback(null, restaurants);
+                        //let allReviews = [];
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- third - restaurants.length=' + (restaurants.length));
+
+                        return DBHelper.getAllIndexDbReviews((error, results) => {
+                            if (error) console.log('dbhelper-getAllIndexDbRestaurants()- second - getAllIndexDbReviews.error=' + (error.message));
+                            if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second - getAllIndexDbReviews.results=' + (results));
+                            //allReviews = results;
+                            return results;
+                        })
+                            .then((allReviews) => {
+                                if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second - getAllIndexDbReviews.allReviews.length=' + (allReviews.length));
+                                if (allReviews.length > 0) {
+                                    if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second - allOperatingHours.length=' + (allReviews.length));
+                                    restaurants = restaurants.map((restaurant) => {
+                                        const reviews = allReviews.filter(r => r.restaurant_id == restaurant.restaurant_id);
+                                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- second -allReviews.filter-reviews.length=' + (reviews.length));
+                                        if (reviews.length > 0) restaurants[i].reviews = reviews;
+                                        return restaurant;
+                                    });
+                                }
+                                return restaurants;
+                            });
+                    })
+                    .then(restaurants => {
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- fourth - (typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- fourth - restaurants[0].id=' + (restaurants[0].id));
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- fourth - restaurants[0].operating_hours=' + (restaurants[0].operating_hours));
+                        if (debug) console.log('dbhelper-getAllIndexDbRestaurants()- fourth - restaurants[0].reviews=' + (restaurants[0].reviews));
+                        callback(null, restaurants);
+                    });
             })
             .catch(error => {
                 // Oops!. Got an error from server.
@@ -560,109 +517,6 @@ class DBHelper {
                 console.log(error.message);
                 callback(error, null);
             });
-
-        // return dbPromise.then(db => {
-        //
-        //     const restaurants = restaurantsStore.getAll();
-        //     if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-(typeof restaurants !== undefined && restaurants.length > 0)=' + ((typeof restaurants !== 'undefined' && restaurants.length > 0)));
-        //     return restaurants;
-        // })
-        // .then(restaurants => {
-        //     if (typeof restaurants !== 'undefined' && restaurants.length > 0)
-        //     {
-        //         if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurants.length=' + (restaurants.length));
-        //         for (let restaurant of restaurants) {
-        //             const restaurant_id = restaurant.restaurant_id;
-        //             if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurant_id=' + (restaurant_id));
-        //             restaurant.id = restaurant_id;
-        //             restaurant.latlng = [];
-        //             restaurant.latlng.lat = restaurant.lat;
-        //             restaurant.latlng.lng = restaurant.lng;
-        //
-        //             let operating_hours = [];
-        //             const operating_hours_list = operatingHoursStore.getAll(['restaurant_id', restaurant_id]);
-        //             // for (const indx in operating_hours_list) {
-        //             //     operating_hours[indx] = [operating_hours_list[indx]];
-        //             // }
-        //             restaurant.operating_hours = operating_hours_list;
-        //
-        //             let reviews = [];
-        //             const review_list = reviewsStore.getAll('restaurant_id', restaurant_id);
-        //             // for (const review in review_list) {
-        //             //     const rItem = {
-        //             //         "review_id": review.review_id,
-        //             //         "name": review.name,
-        //             //         "createdAt": review.createdAt,
-        //             //         "updatedAt": review.updatedAt,
-        //             //         "rating": review.rating,
-        //             //         "comments": review.comments
-        //             //     };
-        //             //     reviews.push(rItem);
-        //             // }
-        //             restaurant.reviews = review_list;
-        //         }
-        //     }
-
-        // for (const restaurant of restaurants) {
-        //     if (restaurant) {
-        //         if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-restaurant.restaurant_id=' + (restaurant.restaurant_id));
-        //         DBHelper.getIndexDbRestaurantById(restaurant.restaurant_id, (error, result) => {
-        //             if (debug) console.log('dbhelper-getAllIndexDbRestaurants()-result=' + (result));
-        //             if (result) {
-        //                 restaurants.push(result);
-        //             }
-        //             return;
-        //         });
-        //     }
-        // }
-        //     return restaurants;
-        // }).then(restaurants => {
-        //     callback(null, restaurants);
-        // })
-        //     .catch(error => {
-        //         // Oops!. Got an error from server.
-        //         error.message = (`Request failed. Returned status of ${error.message}`);
-        //         console.log(error.message);
-        //         callback(error, null);
-        //     });
-
-        // return fetch(DBHelper.DATABASE_URL_RESTAURANTS, {
-        //     headers: {'Content-Type': 'application/json'}
-        // })
-        //     .then(networkResponse => {
-        //         if (debug) console.log('dbhelper-fetchRestaurants()-networkResponse' + (networkResponse));
-        //         return networkResponse;
-        //     })
-        //     .then(response => response.json())
-        //     .then(restaurants => {
-        //         for (const key in restaurants) {
-        //             restaurants[key].restaurant_id = restaurants[key].id;
-        //             restaurants[key].reviews = [];
-        //         }
-        //
-        //         let key = 0;
-        //         restaurants.forEach(restaurant => {
-        //             if (restaurant) {
-        //                 return DBHelper.fetchReviewsByRestaurantId(restaurant.restaurant_id, (error, result) => {
-        //                     restaurants[key].reviews = result;
-        //                 });
-        //             }
-        //             key++;
-        //         });
-        //
-        //         return restaurants;
-        //     })
-        //     .then(jsonData => {
-        //         if (debug) console.log('dbhelper-fetchRestaurants()-data.length=' + (jsonData.length));
-        //         if (debug) console.log('dbhelper-fetchRestaurants()-data=' + (jsonData));
-        //         return callback(null, jsonData);
-        //     })
-        //     .catch(error => {
-        //         // Oops!. Got an error from server.
-        //         error.message = (`Request failed. Returned status of ${error.message} - dbhelper-fetchRestaurants()`);
-        //         return callback(error.message, null);
-        //     });
-
     }
 
 
@@ -670,6 +524,7 @@ class DBHelper {
      * Fetch review by ID.
      */
     static getIndexDbRestaurantById(restaurant_id, callback) {
+        debug = true;
         if (debug) console.log('dbhelper-getIndexDbRestaurantById()-input-restaurant_id=' + (restaurant_id));
 
         if (!restaurant_id || restaurant_id.length === 0) {
@@ -959,23 +814,22 @@ class DBHelper {
     /**
      * update a restaurant by its ID.
      */
-    static addUpdateCacheRestaurantById(restaurant, callback) {
-
-        if (debug) console.log('-----------------------------------');
+    static addUpdateCacheRestaurantById(restaurant_id, callback) {
         if (debug) console.log('dbhelper-addUpdateCacheRestaurantById()');
+        if (debug) console.log('dbhelper-addUpdateCacheRestaurantById()-restaurant_id=' + (restaurant_id));
 
         if (debug) console.log('Update cache by deleting and then adding cache');
         return caches.open(staticCacheName).then(function (cache) {
             if (debug) console.log('Deleting index file cache');
             return cache.delete(new Request('/'))
                 .then(function () {
-                    return cache.delete(new Request('/restaurant.html?id=' + restaurant.restaurant_id));
+                    return cache.delete(new Request('/restaurant.html?id=' + restaurant_id));
                 });
         }).then(function () {
             if (debug) console.log('Adding index file cache');
             return fetch(new Request('/'))
                 .then(function () {
-                    return fetch(new Request('/restaurant.html?id=' + restaurant.restaurant_id));
+                    return fetch(new Request('/restaurant.html?id=' + restaurant_id));
                 });
         })
             .catch(error => {
@@ -1043,6 +897,7 @@ class DBHelper {
      * Fetch all reviews.
      */
     static fetchReviewsByRestaurantId(restaurant_id, callback) {
+        debug = true;
         if (debug) console.log('dbhelper-fetchReviewsByRestaurantId()');
         if (debug) console.log('dbhelper-fetchReviewsByRestaurantId()-restaurant_id=' + (restaurant_id));
 
@@ -1053,17 +908,36 @@ class DBHelper {
 
         return fetch(review_url)
             .then(response => response.json())
-            .then(reviews => {
+            .then((reviews) => {
                 if (debug) console.log('dbhelper-fetchReviewsByRestaurantId()-reviews=' + (reviews));
-                //reviews.forEach(review => {
-                //    console.log('dbhelper-fetchReviewsByRestaurantId()-reviews-review=' + (review.id));
-                //});
-                //callback(null, reviews);
+                if (!Array.isArray(reviews) || reviews.length === 0) {
+                    reviews.forEach(review => {
+                        // add or update review in cache
+                        if (debug) console.log('calling-DBHelper.addUpdateLocalReviewById()');
+                        DBHelper.addUpdateLocalReviewById(review, (error, result) => {
+                            if (debug) console.log('error=' + (error));
+                            if (debug) console.log('result=' + (result));
+                        });
+
+                        if (debug) console.log('calling-DBHelper.addUpdateCacheReviewById()');
+                        DBHelper.addUpdateCacheReviewById(review, (error, result) => {
+                            if (debug) console.log('error=' + (error));
+                            if (debug) console.log('result=' + (result));
+                        });
+
+                        return review;
+                    });
+                }
                 return reviews;
+            })
+            .then((reviews) => {
+                if (debug) console.log('dbhelper-fetchReviewsByRestaurantId()-reviews=' + (reviews));
+                callback(null, reviews);
+                return;
             })
             .catch(error => {
                 // Oops!. Got an error from server.
-                error.message = (`Request failed-1. Returned status of ${error.message}`);
+                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-fetchReviewsByRestaurantId()`);
                 console.log(error.message);
                 callback(error, null);
             });
@@ -1074,46 +948,98 @@ class DBHelper {
      * get all restaurants.
      */
     static getAllRestaurants(callback) {
+// debug = true;
         if (debug) console.log('dbhelper-getAllRestaurants()');
 
-        if (debug) console.log('dbhelper-getAllRestaurants()-this.restaurants=' + (this.restaurants));
+        let restaurants = this.restaurants;
+        if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - first =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
+        if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - first - results =' + (restaurants));
 
         return dbPromise
             .then(() => {
-                return this.restaurants;
-            })
-            .then((restaurants) => {
-                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - first =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
-                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - first - restaurants =' + (restaurants));
+                restaurants = this.restaurants;
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - second =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - second - results =' + (restaurants));
                 if (!Array.isArray(restaurants) || restaurants.length === 0) {
                     return DBHelper.getAllIndexDbRestaurants((error, results) => {
                         if (error) callback(error.message, null);
-                        if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - first-sub =' + ((!Array.isArray(results) || results.length === 0)));
-                        if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - first-sub - results =' + (results));
-                        if (Array.isArray(results) && results.length > 0) this.restaurants = results;
-                        return this.restaurants;
-                    });
-                }
-                else return this.restaurants;
-            })
-            .then((restaurants) => {
-                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - second =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
-                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - second - restaurants =' + (restaurants));
-                if (!Array.isArray(restaurants) || restaurants.length === 0) {
-                    return DBHelper.fetchRestaurants((error, results) => {
-                        if (error) return callback(error.message, null);
                         if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - second-sub =' + ((!Array.isArray(results) || results.length === 0)));
                         if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - second-sub - results =' + (results));
                         if (Array.isArray(results) && results.length > 0) this.restaurants = results;
-                        return this.restaurants;
+                        return true;
                     });
                 }
-                else return this.restaurants;
+                else return true;
             })
-            .then(restaurants => {
+            .then(() => {
+                restaurants = this.restaurants;
                 if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - third =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
-                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - third - restaurants =' + (restaurants));
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - third - results =' + (restaurants));
+                if (!Array.isArray(restaurants) || restaurants.length === 0) {
+                    return DBHelper.fetchRestaurants((error, results) => {
+                        if (error) return callback(error.message, null);
+                        if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - third-sub =' + ((!Array.isArray(results) || results.length === 0)));
+                        if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - third-sub - results =' + (results));
+                        if (Array.isArray(results) && results.length > 0) this.restaurants = results;
+                        return results;
+                    })
+                        .then((restaurants) => {
+                            if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - fourth =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
+                            if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - fourth - results =' + (restaurants));
+                            if (Array.isArray(restaurants) && restaurants.length > 0) {
+                                restaurants = restaurants.map((restaurant) => {
+                                    restaurant.restaurant_id = restaurant.id;
+                                    restaurant.reviews = DBHelper.fetchReviewsByRestaurantId(restaurant.restaurant_id, (error, result) => {
+                                        return result;
+                                    });
+                                    return restaurant;
+                                });
+                            }
+                            return restaurants;
+                        });
+                }
+                return restaurants;
+            })
+            .then((restaurants) => {
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - fifth =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - fifth - results =' + (restaurants));
+
+                if (Array.isArray(restaurants) && restaurants.length > 0) {
+                    if (debug) console.log('dbhelper-getAllRestaurants()- is operating_hours array empty - fifth-sub1 =' + ((!Array.isArray(this.operating_hours) || this.operating_hours.length === 0)));
+                    if (debug) console.log('dbhelper-getAllRestaurants()- is operating_hours array empty - fifth-sub1 - results =' + (this.operating_hours));
+                    if (!Array.isArray(this.operating_hours) || this.operating_hours.length === 0) {
+                        dbPromise.then(() => {
+                            DBHelper.getAllIndexDbOperatingHours((error, results) => {
+                                if (debug) console.log('dbhelper-getAllRestaurants()- is operating_hours array empty - fifth-sub2 =' + ((!Array.isArray(results) || results.length === 0)));
+                                if (debug) console.log('dbhelper-getAllRestaurants()- is operating_hours array empty - fifth-sub2 - results =' + (results));
+                                this.operating_hours = results;
+                                return results;
+                            });
+                            return true;
+                        })
+                            .then(() => {
+                                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - fifth-sub3 - operating_hours.length=' + (this.operating_hours.length));
+                                if (this.operating_hours.length > 0) {
+                                    restaurants = restaurants.map((restaurant) => {
+                                        const operating_hours = operating_hours.filter(r => r.restaurant_id == restaurant.restaurant_id);
+                                        if (operating_hours.length > 0) restaurant.operating_hours = operating_hours;
+                                        return restaurant;
+                                    });
+                                }
+                                return true;
+                            });
+                    }
+                }
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - sixth =' + ((!Array.isArray(restaurants) || restaurants.length === 0)));
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - sixth - results =' + (restaurants));
+                // update object with new attributes
                 this.restaurants = restaurants;
+
+                return true;
+            })
+            .then(() => {
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - sevnth =' + ((!Array.isArray(this.restaurants) || this.restaurants.length === 0)));
+                if (debug) console.log('dbhelper-getAllRestaurants()- is restaurants array empty - sevnth - results =' + (this.restaurants));
                 return callback(null, this.restaurants);
             })
             .catch(error => {
@@ -1127,54 +1053,43 @@ class DBHelper {
      * get restaurant by ID.
      */
     static getRestaurantById(restaurant_id, callback) {
-        if (debug) console.log('-----------------------------------');
+        debug = true;
         if (debug) console.log('dbhelper-getRestaurantById()');
         if (debug) console.log('dbhelper-getRestaurantById()-restaurant_id=' + (restaurant_id));
 
-        if (debug) console.log('dbhelper-getRestaurantById()-this.restaurants=' + (this.restaurants));
-
-        let error_message = '';
-
-        let restaurants = this.restaurants;
         return dbPromise
-            .then(restaurants, () => {
-                if (!Array.isArray(restaurants) || restaurants.length === 0) {
-                    if (debug) console.log('dbhelper-getRestaurantById()-getAllRestaurants()');
-                    return DBHelper
-                        .getAllRestaurants((error, restaurants) => {
-                            if (debug) console.log('-----------------------------------');
-                            if (debug) console.log('dbhelper-getRestaurantById()-getAllRestaurants()-restaurants=' + (restaurants));
-                            return restaurants;
+            .then(() => {
+                let restaurant;
+                if (!Array.isArray(this.restaurants) || this.restaurants.length === 0) {
+                    restaurant = DBHelper
+                        .getIndexDbRestaurantById(restaurant_id, (error, restaurant) => {
+                            if (debug) console.log('dbhelper-getRestaurantById()-getIndexDbRestaurantById()-restaurant=' + (restaurant));
+                            return restaurant;
                         });
                 }
-                else {
-                    return restaurants;
+                else
+                {
+                    restaurant = this.restaurants.filter(r => r.id == restaurant_id);
+                    if (debug) console.log('dbhelper-getRestaurantById()-this.restaurants.filter-restaurant=' + (restaurant));
                 }
+                return restaurant;
             })
-            .then(restaurants, () => {
-                // if restaurants array exists then use that
-                if (debug) console.log('dbhelper-getRestaurantById()-restaurants=' + (restaurants));
+            .then((restaurant) => {
+                if (debug) console.log('dbhelper-getRestaurantById()-.then-restaurant=' + (restaurant));
 
-                if (!restaurants) {
-                    // Oops!. Got an error from server.
-                    const error_message = (`Request failed. Restaurants could not be retrived`);
-                    return callback(error_message, null);
+                if (!restaurant) {
+                    return DBHelper.fetchRestaurantById(restaurant_id, (error, restaurant) => {
+                        if (error) return callback(error, null);
+                        return callback(null, restaurant);
+                    })
                 }
-                if (debug) console.log('dbhelper-getRestaurantById()-restaurants[0]=' + (restaurants[0]));
-                if (debug) console.log('dbhelper-getRestaurantById()-restaurants.name=' + (restaurants.name));
-
-                let restaurant = restaurants.filter(r => r.id == restaurant_id);
-                if (debug) console.log('dbhelper-getRestaurantById()-restaurant.filter()=' + (restaurant));
-
-                if (!restaurants) {
-                    // Oops!. Got an error from server.
-                    error_message = (`Request failed. Restaurant by id could not be located`);
-                    return callback(error_message, null);
-                }
-
-                restaurant = restaurant[0];
-                if (debug) console.log('dbhelper-getRestaurantById()-restaurant.filter()=' + (restaurant));
-                return callback(null, restaurant);
+                else return callback(null, restaurant[0]);
+            })
+            .catch(error => {
+                // Oops!. Got an error from server.
+                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getRestaurantById()`);
+                callback(error.message, null);
+                return;
             });
     }
 
@@ -1183,36 +1098,56 @@ class DBHelper {
      * get all reviews.
      */
     static getAllReviews(callback) {
-
-        if (debug) console.log('-----------------------------------');
         if (debug) console.log('dbhelper-getAllReviews()');
 
         let reviews = this.reviews;
+        if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - first =' + ((!Array.isArray(reviews) || reviews.length === 0)));
+        if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - first - results =' + (reviews));
+
         return dbPromise
-            .then(reviews, () => {
+            .then(() => {
+                reviews = this.reviews;
+                if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - second =' + ((!Array.isArray(reviews) || reviews.length === 0)));
+                if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - second - results =' + (reviews));
                 if (!Array.isArray(reviews) || reviews.length === 0) {
-                    return DBHelper.getAllIndexDbReviews((error, restaurant_reviews) => {
-                        return restaurant_reviews;
+                    return DBHelper.getAllIndexDbReviews((error, results) => {
+                        if (error) callback(error.message, null);
+                        if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - second-sub1 =' + ((!Array.isArray(results) || results.length === 0)));
+                        if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - second-sub1 - results =' + (results));
+                        if (Array.isArray(results) && results.length > 0) this.reviews = results;
+                        return true;
                     });
                 }
-                else {
-                    return reviews;
-                }
+                else return true;
             })
-            .then(reviews => {
-                if (debug) console.log('reviews=' + (reviews));
+            .then(() => {
+                reviews = this.reviews;
+                if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - third =' + ((!Array.isArray(reviews) || reviews.length === 0)));
+                if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - third - results =' + (reviews));
+                if (!Array.isArray(reviews) || reviews.length === 0) {
+                    return DBHelper.fetchAllReviews((error, results) => {
+                        if (error) return callback(error.message, null);
+                        if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - third-sub1 =' + ((!Array.isArray(results) || results.length === 0)));
+                        if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - third-sub1 - results =' + (results));
+                        if (Array.isArray(results) && results.length > 0) this.reviews = results;
+                        return true;
+                    });
+                }
+                else return true;
+            })
+            .then(() => {
+                reviews = this.reviews;
+                if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - fourth =' + ((!Array.isArray(reviews) || reviews.length === 0)));
+                if (debug) console.log('dbhelper-getAllReviews()- is reviews array empty - fourth - results =' + (reviews));
 
-                if (!reviews) return callback('No reviews found', null);
-
-                // update reviews
-                this.reviews = reviews;
-
-                return callback(null, reviews);
+                callback(null, this.reviews);
+                return;
             })
             .catch(error => {
                 // Oops!. Got an error from server.
                 error.message = (`Request failed. Returned status of ${error.message}`);
-                return callback(error.message, null);
+                callback(error.message, null);
+                return;
             });
     }
 
@@ -1220,33 +1155,58 @@ class DBHelper {
      * Fetch review by ID.
      */
     static getReviewsByRestaurantId(restaurant_id, callback) {
-
-        if (debug) console.log('-----------------------------------');
+        debug = true;
         if (debug) console.log('dbhelper-getReviewsByRestaurantId()');
         if (debug) console.log('restaurant_id=' + (restaurant_id));
 
         let reviews = this.reviews;
+        if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - first =' + ((!Array.isArray(reviews) || reviews.length === 0)));
+        if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - first - results =' + (reviews));
+
         return dbPromise
-            .then(reviews, () => {
+            .then(() => {
+                reviews = this.reviews;
                 if (!Array.isArray(reviews) || reviews.length === 0) {
-                    return DBHelper.getAllReviews((error, restaurant_reviews) => {
-                        return restaurant_reviews;
-                    });
+                    return DBHelper
+                        .getAllReviews((error, result) => {
+                            if (debug) console.log('dbhelper-getReviewsByRestaurantId()-getAllReviews()-result=' + (result));
+                            if (error) return false;
+                            if (result) return true;
+                        });
+                }
+                return true;
+            })
+            .then(() => {
+                reviews = this.reviews;
+                if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - second =' + ((!Array.isArray(reviews) || reviews.length === 0)));
+                if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - second - results =' + (reviews));
+
+                // get select restaurant
+                let restaurant_reviews = reviews;
+                if (restaurant_reviews) {
+                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()-reviews[0]=' + (restaurant_reviews[0]));
+
+                    restaurant_reviews = restaurant_reviews.filter(r => r.restaurant_id == restaurant_id);
+                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - third =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
+                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - third - results =' + (restaurant_reviews));
+                }
+                if (!restaurant_reviews) {
+                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()-fetchReviewsByRestaurantId()');
+                    return DBHelper.fetchReviewsByRestaurantId(restaurant_id, (error, result) => {
+                        if (error) return [];
+                        if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - callback1 - results =' + (result));
+                        return result;
+                    })
+                        .then(restaurant_reviews => {
+                            if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - callback1-then - results =' + (restaurant_reviews));
+                            return callback(null, restaurant_reviews);
+                        });
                 }
                 else {
-                    return reviews;
+                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - callback2 - results =' + (restaurant_reviews));
+                    return callback(null, restaurant_reviews);
                 }
-            })
-            .then(reviews, () => {
-                if (debug) console.log('reviews=' + (reviews));
-
-                if (!reviews) return callback('No reviews found', null);
-
-                // if reviews array exists then use that to filter out restaurant specific reviews
-                const restaurant_reviews = reviews.filter(r => r.restaurant_id == restaurant_id);
-                return callback(null, restaurant_reviews);
             });
-
     }
 
     /**
@@ -1259,17 +1219,17 @@ class DBHelper {
         if (debug) console.log('restaurant_id=' + (restaurant_id));
         if (debug) console.log('review_id=' + (review_id));
 
-        let reviews = this.reviews;
         if (!Array.isArray(this.reviews) || this.reviews.length === 0) {
-            reviews = DBHelper.getAllReviews((error, restaurant_reviews) => {
-                return restaurant_reviews;
+            return DBHelper.getAllReviews((error, restaurant_reviews) => {
+                this.reviews = restaurant_reviews;
+                return true;
             });
         }
 
         // if reviews array exists then use that to filter out restaurant specific reviews
-        if (debug) console.log('reviews=' + (reviews));
+        if (debug) console.log('this.reviews=' + (this.reviews));
 
-        return reviews
+        return this.reviews
             .then(reviews => {
                 const review = reviews.filter(r => r.id == review_id);
                 return callback(null, review);
@@ -1281,19 +1241,29 @@ class DBHelper {
             });
     }
 
+
+    static getAllIndexDbOperatingHours(callback) {
+        if (debug) console.log('dbhelper-getAllIndexDbOperatingHours()');
+        dbPromise.then(db => {
+            const txOperatingHours = db.transaction('operating_hours', 'readonly');
+            const operatingHoursStore = txOperatingHours.objectStore('operating_hours');
+            const allOperatingHours = operatingHoursStore.getAll();
+            return callback(null, allOperatingHours);
+        });
+    }
+
     /**
-     * Fetch all reviews.
+     * get db all reviews.
      */
     static getAllIndexDbReviews(callback) {
 
-        if (debug) console.log('-----------------------------------');
         if (debug) console.log('dbhelper-getAllIndexDbReviews()');
 
         dbPromise.then(function (db) {
             const txReviews = db.transaction('reviews', 'readonly');
             let reviewsStore = txReviews.objectStore('reviews');
-            const review_list = reviewsStore.getAll();
-            return callback(null, reviews);
+            const reviews = reviewsStore.getAll();
+            callback(null, reviews);
         });
     }
 
@@ -1305,17 +1275,37 @@ class DBHelper {
         if (debug) console.log('dbhelper-fetchAllReviews()');
         // fetch all review with proper error handling.
 
-        if (debug) console.log('call-fetch');
-
         let requestURL = DBHelper.DATABASE_URL_REVIEWS;
         if (debug) console.log('requestURL=' + (requestURL));
 
         return fetch(requestURL)
-            .then(response => callback(null, response.json()))
+            .then(response => {
+                const reviews = response.json();
+
+                if (reviews) {
+                    reviews.forEach(review => {
+                        // add or update review in cache
+                        if (debug) console.log('calling-DBHelper.addUpdateLocalReviewById()');
+                        DBHelper.addUpdateLocalReviewById(review, (error, result) => {
+                            if (debug) console.log('error=' + (error));
+                            if (debug) console.log('result=' + (result));
+                        });
+
+                        if (debug) console.log('calling-DBHelper.addUpdateCacheReviewById()');
+                        DBHelper.addUpdateCacheReviewById(review, (error, result) => {
+                            if (debug) console.log('error=' + (error));
+                            if (debug) console.log('result=' + (result));
+                        });
+                    });
+                }
+                callback(null, reviews);
+                return;
+            })
             .catch(error => {
                 // Oops!. Got an error from server.
                 error.message = (`Request failed-1. Returned status of ${error.message}`);
-                return callback(error.message, null);
+                callback(error.message, null);
+                return;
             });
     }
 
@@ -1336,18 +1326,21 @@ class DBHelper {
         return fetch(requestURL)
             .then(response => {
                 const review = response.json();
-                // add or update review in cache
-                if (debug) console.log('calling-DBHelper.addUpdateLocalReviewById()');
-                DBHelper.addUpdateLocalReviewById(review, (error, result) => {
-                    if (debug) console.log('error=' + (error));
-                    if (debug) console.log('result=' + (result));
-                });
 
-                if (debug) console.log('calling-DBHelper.addUpdateCacheReviewById()');
-                DBHelper.addUpdateCacheReviewById(review, (error, result) => {
-                    if (debug) console.log('error=' + (error));
-                    if (debug) console.log('result=' + (result));
-                });
+                if (review) {
+                    // add or update review in cache
+                    if (debug) console.log('calling-DBHelper.addUpdateLocalReviewById()');
+                    DBHelper.addUpdateLocalReviewById(review, (error, result) => {
+                        if (debug) console.log('error=' + (error));
+                        if (debug) console.log('result=' + (result));
+                    });
+
+                    if (debug) console.log('calling-DBHelper.addUpdateCacheReviewById()');
+                    DBHelper.addUpdateCacheReviewById(review, (error, result) => {
+                        if (debug) console.log('error=' + (error));
+                        if (debug) console.log('result=' + (result));
+                    });
+                }
                 callback(null, review);
             })
             .catch(error => {
@@ -1365,17 +1358,17 @@ class DBHelper {
         if (debug) console.log('-----------------------------------');
         if (debug) console.log('dbhelper-addUpdateReviewById()');
 
-        if (debug && review) {
-            for (const indx in review) {
-                if (debug) console.log('review[' + indx + ']=' + (review[indx]));
-            }
-        }
+        // if (debug && review) {
+        //     for (const indx in review) {
+        //         if (debug) console.log('review[' + indx + ']=' + (review[indx]));
+        //     }
+        // }
 
         let local_error = null;
         let cache_error = null;
         let remote_error = null;
 
-        let idMax = review.id;
+        let idMax = review.review_id;
         if (debug) console.log('calling-DBHelper.addUpdateLocalReviewById()');
         DBHelper.addUpdateLocalReviewById(review, (error, result) => {
             if (debug) console.log('error=' + (error));
@@ -1424,13 +1417,13 @@ class DBHelper {
             if (debug) console.log('txReview=' + (txReview));
             let reviewStore = txReview.objectStore('reviews');
 
-            const idIndex = reviewStore.index('id');
+            const idIndex = reviewStore.index('review_id');
             if (debug) console.log('idIndex=' + (idIndex));
 
             return idIndex.getAllKeys().then(keys => {
                 let idMax = 0;
                 keys.forEach(key => {
-                    console.log('key=' + key);
+                    if (debug) console.log('key=' + key);
                     idMax = key;
                 });
 
@@ -1441,30 +1434,30 @@ class DBHelper {
                 return idMax;
             }).then(idMax => {
                 if (debug) {
-                    console.log('idMax.then()=' + (idMax));
+                    if (debug) console.log('idMax.then()=' + (idMax));
                     for (const key in review) {
-                        console.log(key + '=' + review[key]);
+                        if (debug) console.log(key + '=' + review[key]);
                     }
                 }
-                review.id = idMax;
+                review.review_id = idMax;
                 if (debug) {
-                    console.log('updated review.id' + (idMax));
+                    if (debug) console.log('updated review.review_id' + (idMax));
                     for (const key in review) {
-                        console.log(key + '=' + review[key]);
+                        if (debug) console.log(key + '=' + review[key]);
                     }
                 }
 
                 return reviewStore
-                    .get(review.id)
+                    .get(review.review_id)
                     .then(function (item) {
                         if (!item) {
                             if (debug) console.log('add review item');
                             const rtNewItem = [{
-                                id: idMax,
+                                review_id: idMax,
                                 restaurant_id: parseInt(review.restaurant_id),
                                 name: review.name,
                                 rating: parseInt(review.rating),
-                                comment: review.comment,
+                                comments: review.comments,
                                 updatedAt: review.updatedAt,
                                 createdAt: review.createdAt
                             }];
@@ -1516,15 +1509,19 @@ class DBHelper {
         if (debug) console.log('-----------------------------------');
         if (debug) console.log('dbhelper-addUpdateRemoteReviewById()');
 
-        if (debug && review) {
-            for (const indx in review) {
-                if (debug) console.log('review[' + indx + ']=' + (review[indx]));
-            }
-        }
+        // if (debug && review) {
+        //     for (const indx in review) {
+        //         if (debug) console.log('review[' + indx + ']=' + (review[indx]));
+        //     }
+        // }
 
         let requestURL = DBHelper.DATABASE_URL_REVIEWS;
         if (debug) console.log('requestURL=' + (requestURL));
 
+        // add remove id name as well
+        const review_id = review.review_id;
+        delete review.review_id;
+        review.id = review_id;
         if (debug) console.log('review.id.length=' + (review.id.length));
         if (review.id.length > 0) {
             requestURL += '/' + review.id;
@@ -1571,14 +1568,6 @@ class DBHelper {
                 error.message = (`Request failed. Returned status of ${error.message}`);
                 callback(error, null);
             });
-        // if (debug) console.log('fetchResult=' + (fetchResult));
-        //
-        // if (fetchResult) {
-        //     callback(null, fetchResult);
-        // }
-        // else {
-        //     callback('Review does not exist', null);
-        // }
     }
 
     // example copied from
