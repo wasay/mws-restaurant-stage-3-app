@@ -250,14 +250,20 @@ createRestaurantHTML = (restaurant) => {
  */
 addMarkersToMap = (restaurants = self.restaurants) => {
     if (debug) console.log('index-addMarkersToMap()');
-    restaurants.forEach(restaurant => {
-        // Add marker to the map
-        const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
-        google.maps.event.addListener(marker, 'click', () => {
-            window.location.href = marker.url
+    if (restaurants)
+    {
+        restaurants.forEach(restaurant => {
+            // Add marker to the map
+            if (restaurant)
+            {
+                const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
+                google.maps.event.addListener(marker, 'click', () => {
+                    window.location.href = marker.url
+                });
+                self.markers.push(marker);
+            }
         });
-        self.markers.push(marker);
-    });
+    }
 };
 
 

@@ -35,28 +35,31 @@ window.initMap = () => {
  * Get current restaurant from page URL.
  */
 fetchRestaurantFromURL = (callback) => {
+debug = true;
     if (debug) console.log('restaurant-fetchRestaurantFromURL()');
     if (self.restaurant) { // restaurant already fetched!
         callback(null, self.restaurant);
         return;
     }
     const id = getParameterByName('id');
-    if (debug) console.log('restaurant_id=' + (id));
+    if (debug) console.log('restaurant-fetchRestaurantFromURL() - restaurant_id=' + (id));
     let error;
     if (!id) { // no id found in URL
-        error = 'No restaurant id in URL'
+        error = 'No restaurant id in URL';
         callback(error, null);
     }
     else {
+        if (debug) console.log('restaurant-fetchRestaurantFromURL() - getRestaurantById()');
         DBHelper.getRestaurantById(id, (error, restaurant) => {
+            if (debug) console.log('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result');
             if (error) {
-	    	console.log(error);
-		return;
-	    }
-	    
-	    if (!restaurant) {
-	        return;
-	    }
+                console.log(error + ('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result'));
+                return;
+            }
+            if (!restaurant) {
+                if (debug) console.log('restaurant-fetchRestaurantFromURL() - No restaurant info found');
+                return;
+            }
 
             self.restaurant = restaurant;
             fillRestaurantHTML();
@@ -141,7 +144,6 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
 fillReviewsHTML = (reviews = self.restaurant.reviews) => {
     debug = true;
     if (debug) console.log('restaurant-fillReviewsHTML()');
-    if (debug) console.log('restaurant-fillReviewsHTML()-reviews.restaurant_id=' + (reviews.restaurant_id));
 
     const container = document.getElementById('reviews-container');
     const title = document.createElement('h2');
@@ -177,6 +179,7 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
     const ul = document.getElementById('reviews-list');
 
 
+    if (debug) console.log('restaurant-fillReviewsHTML()-reviews.restaurant_id=' + (reviews.restaurant_id));
 /*
     let restaurant_reviews = reviews;
     if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
