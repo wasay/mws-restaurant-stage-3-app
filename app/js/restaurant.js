@@ -11,7 +11,7 @@ let map;
  */
 window.initMap = () => {
     //console.log('restaurant_info-initMap()');
-    fetchRestaurantFromURL((error, restaurant) => {
+    getRestaurantFromURL((error, restaurant) => {
         if (error) { // Got an error!
             console.error(error);
         }
@@ -24,8 +24,7 @@ window.initMap = () => {
             fillBreadcrumb();
             DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
         }
-        else
-        {
+        else {
             console.error('Unable to retrive restaurant info');
         }
     });
@@ -34,8 +33,8 @@ window.initMap = () => {
 /**
  * Get current restaurant from page URL.
  */
-fetchRestaurantFromURL = (callback) => {
-debug = true;
+getRestaurantFromURL = (callback) => {
+    debug = true;
     if (debug) console.log('restaurant-fetchRestaurantFromURL()');
     if (self.restaurant) { // restaurant already fetched!
         callback(null, self.restaurant);
@@ -49,22 +48,34 @@ debug = true;
         callback(error, null);
     }
     else {
-        if (debug) console.log('restaurant-fetchRestaurantFromURL() - getRestaurantById()');
-        DBHelper.getRestaurantById(id, (error, restaurant) => {
-            if (debug) console.log('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result');
-            if (error) {
-                console.log(error + ('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result'));
-                return;
-            }
-            if (!restaurant) {
-                if (debug) console.log('restaurant-fetchRestaurantFromURL() - No restaurant info found');
-                return;
-            }
+        new Promise((resolve, reject) => {
+            if (debug) console.log('restaurant-fetchRestaurantFromURL()-getRestaurantById() - call');
+            DBHelper.getRestaurantById(id, (error, restaurant) => {
+                if (debug) console.log('restaurant-fetchRestaurantFromURL()-getRestaurantById()-error=' + (error));
+                if (debug) console.log('restaurant-fetchRestaurantFromURL()-getRestaurantById()-restaurant=' + (restaurant));
+                if (error) reject(false);
+                resolve(restaurant);
+            });
+        })
+            .then((restaurant) => {
+                if (debug) console.log('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result');
+                if (error) {
+                    console.log(error + ('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result'));
+                    return;
+                }
+                if (!restaurant) {
+                    if (debug) console.log('restaurant-fetchRestaurantFromURL() - No restaurant info found');
+                    return;
+                }
 
-            self.restaurant = restaurant;
-            fillRestaurantHTML();
-            callback(null, restaurant)
-        });
+                self.restaurant = restaurant;
+                fillRestaurantHTML();
+                callback(null, restaurant);
+            })
+            .catch(error => {
+                console.log('No Restaurant data');
+                return;
+            });
     }
 }
 
@@ -180,37 +191,37 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
 
 
     if (debug) console.log('restaurant-fillReviewsHTML()-reviews.restaurant_id=' + (reviews.restaurant_id));
-/*
-    let restaurant_reviews = reviews;
-    if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
-    if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first - results =' + (restaurant_reviews));
+    /*
+        let restaurant_reviews = reviews;
+        if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
+        if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first - results =' + (restaurant_reviews));
 
-    dbPromise
-    .then(() => {
-        if (!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0) {
-            if (debug) console.log('restaurant-fillReviewsHTML()-getReviewsByRestaurantId()');
-            restaurant_reviews = DBHelper.getReviewsByRestaurantId(self.restaurant.restaurant_id, (error, result) => {
-                if (error) return;
-                return result;
-            })
-                .then((reviews) => reviews);
-        }
-        return restaurant_reviews;
-    })
-        .then((restaurant_reviews) => {
-            if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
-            if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second - results =' + (restaurant_reviews));
-            restaurant_reviews.forEach(review => {
-                ul.appendChild(createReviewHTML(review));
+        dbPromise
+        .then(() => {
+            if (!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0) {
+                if (debug) console.log('restaurant-fillReviewsHTML()-getReviewsByRestaurantId()');
+                restaurant_reviews = DBHelper.getReviewsByRestaurantId(self.restaurant.restaurant_id, (error, result) => {
+                    if (error) return;
+                    return result;
+                })
+                    .then((reviews) => reviews);
+            }
+            return restaurant_reviews;
+        })
+            .then((restaurant_reviews) => {
+                if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
+                if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second - results =' + (restaurant_reviews));
+                restaurant_reviews.forEach(review => {
+                    ul.appendChild(createReviewHTML(review));
+                });
+            // reviews.forEach(review => {
+            //     ul.appendChild(createReviewHTML(review));
+                // });
+                // for (let i = 0; i <= reviews.length; i++) {
+                //     ul.appendChild(createReviewHTML(reviews[i]));
+                // }
             });
-	    // reviews.forEach(review => {
-	    //     ul.appendChild(createReviewHTML(review));
-            // });
-            // for (let i = 0; i <= reviews.length; i++) {
-            //     ul.appendChild(createReviewHTML(reviews[i]));
-            // }
-        });
-*/
+    */
     container.appendChild(ul);
 // debug = false;
 };
@@ -455,8 +466,7 @@ function addReviewModalListener() {
             modalReviewSubmit.innerHTML = 'Wait...';
             saveNewReview((error, result) => {
                 //if (result) alert('result=' + (result));
-                if (result)
-                {
+                if (result) {
                     window.location = window.location + '&msg=Review+saved!';
                 }
             });

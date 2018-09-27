@@ -227,7 +227,19 @@ class DBHelper {
         return fetch(requestURL, {
             headers: {'Content-Type': 'application/json'}
         })
-            .then(networkResponse => callback(null, networkResponse.json()))
+            .then(networkResponse => networkResponse.json())
+            .then((restaurant) => {
+                if (restaurant) {
+                    // add properties
+                    restaurant.restaurant_id = (restaurant.id ? restaurant.id : '');
+                    restaurant.lat = (restaurant.latlng.lat ? restaurant.latlng.lat : '');
+                    restaurant.lng = (restaurant.latlng.lng ? restaurant.latlng.lng : '');
+                    restaurant.operating_hours = {};
+                    restaurant.reviews = {};
+                }
+
+                return callback(null, restaurant);
+            })
             .catch(error => {
                 // Oops!. Got an error from server.
                 error.message = (`Request failed. Returned status of ${error.message} - dbhelper-fetchRestaurantById()`);
@@ -449,23 +461,20 @@ class DBHelper {
             .then((db) => {
                 const txRestaurants = db.transaction('restaurants', 'readonly');
                 const restaurantsStore = txRestaurants.objectStore('restaurants');
-                const restaurants = restaurantsStore.getAll();
+                const restaurants = restaurantsStore.getAllKeys();
                 if (restaurants) {
-                    return restaurants
-                        .then((restaurants) => {
-                            return restaurants.map((restaurant) => {
-                                restaurant.id = restaurant.restaurant_id;
-                                restaurant.latlng = [];
-                                restaurant.latlng.lat = restaurant.lat;
-                                restaurant.latlng.lng = restaurant.lng;
-                                restaurant.operating_hours = [];
-                                restaurant.reviews = [];
-                                return restaurant;
+                    return new Promise((resolve, reject) => {
+                        return restaurants.map((restaurant) => {
+                            DBHelper.getIndexDbRestaurantById(restaurant.restaurant_id, (error, result) => {
+                                if (error) resolve(false);
+                                resolve(result);
                             });
-                        })
-                        .then((restaurants) => {
-                            return callback(null, restaurants);
                         });
+                    })
+                    .then((restaurants) => {
+                        if (!restaurants.id) restaurants.id = restaurants.restaurant_id;
+                        return callback(null, restaurants);
+                    });
                 }
                 else return callback('No results', null);
             })
@@ -491,51 +500,57 @@ class DBHelper {
             return callback(error, null);
         }
 
-        dbPromise.then(db => {
+        let restaurant = {};
 
-            const txRestaurants = db.transaction('restaurants', 'readonly');
-            if (debug) console.log('dbhelper-getIndexDbRestaurantById()-txRestaurants=' + (txRestaurants));
+        return dbPromise
+            .then(db => {
+                const txRestaurants = db.transaction('restaurants', 'readonly');
 
-            let restaurantsStore = txRestaurants.objectStore('restaurants');
-            if (debug) console.log('dbhelper-getIndexDbRestaurantById()-restaurantsStore=' + (restaurantsStore));
+                let restaurantsStore = txRestaurants.objectStore('restaurants');
 
-            return restaurantsStore.get(restaurant_id)
-                .then((restaurant) => {
+                const restaurantRow = restaurantsStore.get(restaurant_id);
 
-                    if (debug) console.log('dbhelper-getIndexDbRestaurantById()- typeof restaurant=' + (typeof restaurant));
-                    if (!restaurant) {
-                        error.message = (`No restaurant id match in idb`);
-                        return callback(error, null);
-                    }
+                if (!restaurant) return false;
 
-                    if (debug) console.log('dbhelper-getIndexDbRestaurantById()-restaurant=' + (restaurant));
-                    if (debug) console.log('dbhelper-getIndexDbRestaurantById()-restaurant.restaurant_id=' + (restaurant.restaurant_id));
+                return restaurantRow;
+            })
+            .then((db, restaurantRow, restaurant) => {
 
+                if (debug) console.log('dbhelper-getIndexDbRestaurantById()- typeof restaurantRow=' + (typeof restaurantRow));
+                if (debug) console.log('dbhelper-getIndexDbRestaurantById()- restaurantRow=' + (restaurantRow));
+                if (!restaurantRow) {
+                    error.message = (`No restaurant id match in idb`);
+                    return callback(error, null);
+                }
 
-                    restaurant.id = restaurant.restaurant_id;
-                    restaurant.latlng = [];
-                    restaurant.latlng.lat = restaurant.lat;
-                    restaurant.latlng.lng = restaurant.lng;
-                    restaurant.operating_hours = [];
-                    restaurant.reviews = [];
+                if (debug) console.log('dbhelper-getIndexDbRestaurantById()-restaurantRow=' + (restaurantRow));
+                if (debug) console.log('dbhelper-getIndexDbRestaurantById()-restaurantRow.restaurant_id=' + (restaurantRow.restaurant_id));
 
-                    let operating_hours = [];
-                    let reviews = [];
-                    if (restaurant.restaurant_id) {
-                        const txOperatingHours = db.transaction('operating_hours', 'readonly');
-                        let operatingHoursStore = txOperatingHours.objectStore('operating_hours');
-                        const operating_hours_list = operatingHoursStore.getAll(['restaurant_id', restaurant.restaurant_id]);
-                        restaurant.operating_hours = operating_hours_list;
+                // set default properites
+                restaurant.restaurant_id = restaurantRow.restaurant_id;
+                restaurant.name = restaurantRow.name;
+                restaurant.address = restaurantRow.address;
+                restaurant.photograph = restaurantRow.photograph;
+                restaurant.neighborhood = restaurantRow.neighborhood;
+                restaurant.cuisine_type = restaurantRow.cuisine_type;
+                restaurant.is_favorite = restaurantRow.is_favorite;
+                restaurant.lat = restaurantRow.lat;
+                restaurant.lng = restaurantRow.lng;
+                restaurant.createdAt = restaurantRow.createdAt;
+                restaurant.updatedAt = restaurantRow.updatedAt;
+                // add properties
+                restaurant.id = restaurantRow.restaurant_id;
+                restaurant.latlng = {};
+                restaurant.latlng.lat = restaurantRow.lat;
+                restaurant.latlng.lng = restaurantRow.lng;
+                restaurant.operating_hours = {};
+                restaurant.reviews = {};
 
-                        const txReviews = db.transaction('reviews', 'readonly');
-                        let reviewsStore = txReviews.objectStore('reviews');
-                        const review_list = reviewsStore.getAll(['restaurant_id', restaurant.restaurant_id]);
-                        restaurant.reviews = review_list;
-                    }
-
-                    return callback(null, restaurant);
-                });
-        })
+                return restaurant;
+            })
+            .then((restaurant) => {
+                return callback(null, restaurant);
+            })
             .catch(error => {
                 // Oops!. Got an error from server.
                 error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getIndexDbRestaurantById()`);
@@ -723,24 +738,24 @@ class DBHelper {
                 return restaurantsStore
                     .get(restaurant.restaurant_id)
                     .then((item) => {
+                        let restaurantObj = {
+                            restaurant_id: restaurant.restaurant_id,
+                            name: restaurant.name,
+                            neighborhood: restaurant.neighborhood,
+                            photograph: restaurant.photograph,
+                            address: restaurant.address,
+                            lat: restaurant.latlng.lat,
+                            lng: restaurant.latlng.lng,
+                            cuisine_type: restaurant.cuisine_type,
+                            is_favorite: restaurant.is_favorite,
+                            createdAt: restaurant.createdAt,
+                            updatedAt: restaurant.updatedAt
+                        };
                         if (!item) {
-                            const rtNewItem = [{
-                                restaurant_id: restaurant.restaurant_id,
-                                name: restaurant.name,
-                                neighborhood: restaurant.neighborhood,
-                                photograph: restaurant.photograph,
-                                address: restaurant.address,
-                                lat: restaurant.latlng.lat,
-                                lng: restaurant.latlng.lng,
-                                cuisine_type: restaurant.cuisine_type,
-                                is_favorite: restaurant.is_favorite,
-                                createdAt: restaurant.createdAt,
-                                updatedAt: restaurant.updatedAt
-                            }];
-                            restaurantsStore.add(rtNewItem[0]);
+                            restaurantsStore.add(restaurantObj);
                         }
                         else {
-                            restaurantsStore.put(restaurant);
+                            restaurantsStore.put(restaurantObj);
                         }
                         txRestaurants.complete;
                     })
@@ -891,25 +906,25 @@ class DBHelper {
         //debug = true;
         if (debug) console.log('dbhelper-getAllRestaurants()');
 
-        return dbPromise
-            .then(() => {
+        //return dbPromise
+            //.then(() => {
                 if (debug) console.log('dbhelper-getAllRestaurants() - 1 - this.restaurants =' + (this.restaurants));
-                if (!this.restaurants) {
-                    return new Promise((resolve, reject) => {
+                return new Promise((resolve, reject) => {
+                    if (!this.restaurants) {
                         DBHelper
                             .getAllIndexDbRestaurants((error, result) => {
-                                if (error) reject(false);
+                                if (error) resolve(false);
                                 resolve(result);
                             });
-                    })
-                        .then((restaurants) => {
-                            if (debug) console.log('dbhelper-getAllRestaurants() - 1 - getAllIndexDbRestaurants()-restaurants =' + (restaurants));
-                            if (restaurants.length > 0) this.restaurants = restaurants;
-                            return true;
-                        });
-                }
-                else this.restaurants;
-            })
+                    }
+                    else resolve(this.restaurants);
+                })
+                    .then((restaurants) => {
+                        if (debug) console.log('dbhelper-getAllRestaurants() - 1 - getAllIndexDbRestaurants()-restaurants =' + (restaurants));
+                        if (restaurants.length > 0) this.restaurants = restaurants;
+                        return restaurants;
+                    })//;
+            //})
             .then(() => {
                 if (debug) console.log('dbhelper-getAllRestaurants() - 2 - this.restaurants =' + (this.restaurants));
                 if (!this.restaurants) {
@@ -930,29 +945,42 @@ class DBHelper {
                 else this.restaurants;
             })
             .then(() => {
-                if (debug) console.log('dbhelper-getAllRestaurants() - 3 - this.restaurants =' + (this.restaurants));
-                if (this.restaurants) {
-                    let restaurants = this.restaurants;
-                    return restaurants.map((restaurant) => {
-                        return new Promise((resolve, reject) => {
-                            DBHelper
-                                .getRestaurantReviewsOperatingHours(restaurant, (error, result) => {
-                                    if (error) reject(restaurant);
-                                    if (debug) console.log('dbhelper-getAllRestaurants() - 3 - getRestaurantReviewsOperatingHours()-result =' + (result));
-                                    resolve(result);
+                if (debug) console.log('dbhelper-getAllRestaurants() - 3-1 - this.restaurants =' + (this.restaurants));
+                return new Promise((resolve, reject) => {
+                    if (this.restaurants) {
+                        let restaurants = this.restaurants;
+                        restaurants.map(restaurant => {
+                            restaurant.restaurant_id = (restaurant.restaurant_id ? restaurant.restaurant_id : restaurant.id);
+                            if (debug) console.log('dbhelper-getAllRestaurants() - 3-2 - restaurant.restaurant_id =' + (restaurant.restaurant_id));
+                            return new Promise((resolve, reject) => {
+                                DBHelper
+                                    .getRestaurantReviewsOperatingHours(restaurant, (error, result) => {
+                                        if (debug) console.log('dbhelper-getAllRestaurants() - 3-2 - getRestaurantReviewsOperatingHours()-error =' + (error));
+                                        if (error) resolve(restaurant);
+                                        if (debug) console.log('dbhelper-getAllRestaurants() - 3-2 - getRestaurantReviewsOperatingHours()-result =' + (result));
+                                        resolve(result);
+                                    });
+                            })
+                                .then((result) => {
+                                    if (result) {
+                                        restaurant.reviews = result.reviews;
+                                        restaurant.operating_hours = result.operating_hours;
+                                    }
+                                    if (debug) console.log('dbhelper-getAllRestaurants() - 3-3 - restaurant =' + (restaurant));
+                                    return restaurant;
                                 });
-                        })
-                            .then(restaurant, (result) => {
-                                if (result) {
-                                    restaurant.reviews = result.reviews;
-                                    restaurant.operating_hours = result.operating_hours;
-                                }
-                                if (debug) console.log('dbhelper-getAllRestaurants() - 3 - restaurant =' + (restaurant));
-                                return restaurant;
-                            });
+                        });
+                        if (debug) console.log('dbhelper-getAllRestaurants() - 3-4 - restaurants =' + (restaurants));
+                        resolve(restaurants);
+                    }
+                    else resolve(this.restaurants);
+                })
+                    .catch(error => {
+                        // Oops!. Got an error from server.
+                        const error_message = (`Request failed. Returned status of ${error.message} - dbhelper-getAllRestaurants`);
+                        if (debug) console.log(error_message);
+                        return restaurant;
                     });
-                }
-                else this.restaurants;
             })
             .then(() => {
                 if (debug) console.log('dbhelper-getAllRestaurants() - 4 - this.restaurants =' + (this.restaurants));
@@ -974,39 +1002,24 @@ class DBHelper {
         if (debug) console.log('dbhelper-getRestaurantById()');
         if (debug) console.log('dbhelper-getRestaurantById()-restaurant_id=' + (restaurant_id));
 
-        return dbPromise
-            .then(() => {
-                let restaurant;
-                if (this.restaurants) {
-                    restaurant = this.restaurants.filter(r => r.id == restaurant_id);
-                }
-                if (debug) console.log('dbhelper-getRestaurantById() - 1 - restaurant =' + (typeof restaurant));
-                if (debug) console.log('dbhelper-getRestaurantById() - 1 - restaurant =' + (restaurant));
-
-                if (!restaurant) {
-                    if (debug) console.log('dbhelper-getRestaurantById() - 1 - getIndexDbRestaurantById() call');
-                    return new Promise((resolve, reject) => {
-                        DBHelper
-                            .getIndexDbRestaurantById(restaurant_id, (error, result) => {
-                                if (error) reject(error);
-                                resolve(result);
-                            });
-                    })
-                        .then((restaurant) => {
-                            if (debug) console.log('dbhelper-getRestaurantById() - 1 - .then()-restaurant =' + (typeof restaurant));
-                            if (debug) console.log('dbhelper-getRestaurantById() - 1 - .then()-restaurant =' + (restaurant));
-                            if (restaurant) return restaurant;
-                            return;
-                        })
-                        .catch(error => {
-                            // Oops!. Got an error from server.
-                            error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getRestaurantById()-getIndexDbRestaurantById()`);
-                            callback(error.message, null);
-                            return;
-                        });
-                }
-                else return restaurant;
-            })
+        return new Promise((resolve, reject) => {
+            if (debug) console.log('dbhelper-getRestaurantById() - 1 - this.restaurants=' + (this.restaurants));
+            if (this.restaurants) {
+                restaurant = this.restaurants.filter(r => r.id == restaurant_id);
+                if (debug) console.log('dbhelper-getRestaurantById() - 1 - restaurant=' + (restaurant));
+            }
+            if (!restaurant) {
+                if (debug) console.log('dbhelper-getRestaurantById() - 1 - getIndexDbRestaurantById() call');
+                DBHelper
+                    .getIndexDbRestaurantById(restaurant_id, (error, result) => {
+                        if (debug) console.log('dbhelper-getRestaurantById() - 1 - getIndexDbRestaurantById()-error=' + (error));
+                        if (error) resolve(false);
+                        if (debug) console.log('dbhelper-getRestaurantById() - 1 - getIndexDbRestaurantById()-result=' + (result));
+                        resolve(result);
+                    });
+            }
+            else resolve(restaurant);
+        })
             .then((restaurant) => {
                 if (debug) console.log('dbhelper-getRestaurantById() - 2 - restaurant =' + (typeof restaurant));
                 if (debug) console.log('dbhelper-getRestaurantById() - 2 - restaurant =' + (restaurant));
@@ -1020,11 +1033,13 @@ class DBHelper {
                             })
                     })
                         .then((restaurant) => {
-                            DBHelper.addUpdateLocalRestaurantById(restaurant, (error, result) => {
-                                // both return restaurant
-                                // (error) reject(restaurant);
-                                //resolve(restaurant);
-                            });
+                            if (debug) console.log('dbhelper-getRestaurantById() - 2.then() - restaurant.restaurant_id=' + (restaurant.restaurant_id));
+
+                            // DBHelper.addUpdateLocalRestaurantById(restaurant, (error, result) => {
+                            //     // both return restaurant
+                            //     // (error) reject(restaurant);
+                            //     //resolve(restaurant);
+                            // });
 
                             DBHelper.addUpdateCacheRestaurantById(restaurant, (error, result) => {
                                 // both return restaurant
@@ -1046,46 +1061,40 @@ class DBHelper {
             .then((restaurant) => {
                 if (debug) console.log('dbhelper-getRestaurantById() - 3 - restaurant =' + (typeof restaurant));
                 if (debug) console.log('dbhelper-getRestaurantById() - 3 - restaurant =' + (restaurant));
-                if (debug) console.log('dbhelper-getRestaurantById() - 3 - restaurant.restaurant.id=' + (restaurant.id));
-                if (debug) console.log('dbhelper-getRestaurantById() - 3 - restaurant.restaurant.restaurant_id=' + (restaurant.restaurant_id));
-                if (restaurant) {
-                    return new Promise((resolve, reject) => {
-                        DBHelper
-                            .getRestaurantReviewsOperatingHours(restaurant, (error, result) => {
-                                // both return restaurant
-                                if (error) reject(restaurant);
-                                resolve(result);
-                            });
-                    })
-                        .then((reviewsHoursResult) => {
-                            if (debug) console.log('dbhelper-getRestaurantById()-getRestaurantReviewsOperatingHours()-typeof reviewsHoursResult=' + (typeof reviewsHoursResult));
-                            if (reviewsHoursResult) {
-                                restaurant.reviews = (reviewsHoursResult.reviews ? reviewsHoursResult.reviews : {});
-                                restaurant.operating_hours = (reviewsHoursResult.operating_hours ? reviewsHoursResult.operating_hours : {});
-                            }
-                            if (debug) console.log('dbhelper-getRestaurantById()-getRestaurantReviewsOperatingHours()-typeof restaurant=' + (typeof restaurant));
-                            if (debug) console.log('dbhelper-getRestaurantById()-getRestaurantReviewsOperatingHours()-restaurant.id=' + (restaurant.id));
-                            if (debug) console.log('dbhelper-getRestaurantById()-getRestaurantReviewsOperatingHours()-restaurant.restaurant_id=' + (restaurant.restaurant_id));
-                            if (debug) console.log('dbhelper-getRestaurantById()-getRestaurantReviewsOperatingHours()-restaurant.reviews=' + (restaurant.reviews));
-                            if (debug) console.log('dbhelper-getRestaurantById()-getRestaurantReviewsOperatingHours()-restaurant.operating_hours=' + (restaurant.operating_hours));
-                            return restaurant;
-                        })
-                        .catch(error => {
-                            // Oops!. Got an error from server.
-                            error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getRestaurantById()-getRestaurantReviewsOperatingHours()`);
-                            callback(error.message, null);
-                            return;
+                if (debug) console.log('dbhelper-getRestaurantById() - 3 - restaurant.id=' + (restaurant.restaurant_id));
+
+                return new Promise((resolve, reject) => {
+                    DBHelper
+                        .getRestaurantReviewsOperatingHours(restaurant, (error, result) => {
+                            if (error) resolve(restaurant);
+                            if (debug) console.log('dbhelper-getRestaurantById() - 3 - getRestaurantReviewsOperatingHours()-result =' + (result));
+                            resolve(result);
                         });
+                })
+            })
+            .then((restaurant, result) => {
+                if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-result =' + (result));
+                if (result) {
+                    if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-result.id =' + (result.id));
+                    if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-result.reviews =' + (result.reviews));
+                    result.reviews.map(review => {
+                        if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-result.review_id=' + (review.review_id));
+                    });
+                    restaurant.reviews = result.reviews;
+                    restaurant.operating_hours = result.operating_hours;
                 }
-                else {
-                    // Oops!. Got an error from server.
-                    error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getRestaurantById()-restaurant`);
-                    callback(error.message, null);
-                    return;
-                }
+                if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-restaurant =' + (restaurant));
+                if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-restaurant.id=' + (restaurant.id));
+                if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-restaurant.reviews=' + (restaurant.reviews));
+                restaurant.reviews.map(review => {
+                    if (debug) console.log('dbhelper-getRestaurantById() - 3 - .then()-restaurant.review_id=' + (review.review_id));
+                });
+                return restaurant;
             })
             .then((restaurant) => {
-                if (debug) console.log('dbhelper-getRestaurantById() - 4 - restaurant =' + (restaurant));
+                if (debug) console.log('dbhelper-getRestaurantById() - 4 - .then()-restaurant =' + (restaurant));
+                if (debug) console.log('dbhelper-getRestaurantById() - 4 - .then()-restaurant.id=' + (restaurant.id));
+                if (debug) console.log('dbhelper-getRestaurantById() - 4 - .then()-restaurant.reviews=' + (restaurant.reviews));
                 return callback(null, restaurant);
             })
             .catch(error => {
@@ -1099,57 +1108,96 @@ class DBHelper {
     static getRestaurantReviewsOperatingHours(restaurant, callback) {
         //debug = true;
         if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()');
+        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-input-restaurant=' + (restaurant));
 
-        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.restaurant.id=' + (restaurant.id));
-        restaurant.restaurant_id = restaurant.id;
+        const restaurant_id = (restaurant.id ? restaurant.id : (restaurant.restaurant_id ? restaurant.restaurant_id : ''));
+        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-restaurant_id=' + (restaurant_id));
 
-        dbPromise
-            .then(() => {
-                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(first)-restaurant.id=' + (restaurant.id));
-                restaurant.reviews = DBHelper.getReviewsByRestaurantId(restaurant.restaurant_id, (error, result) => {
-                    return result;
-                });
-                return restaurant;
-            })
-            .then((restaurant) => {
-                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-restaurant.id=' + (restaurant.id));
-                restaurant.operating_hours = dbPromise
-                    .then(() => {
-                        if (!this.operating_hours) {
-                            return dbPromise
-                                .then(() => {
-                                    return DBHelper.getAllIndexDbOperatingHours((error, results) => {
-                                        if (results) this.operating_hours = results;
-                                        return results;
-                                    });
+        if (!restaurant_id) callback('Missing restaurant id', null);
+
+        return new Promise((resolve, reject) => {
+            if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(first)-getIndexDbOperatingHoursByRestaurantId()-call');
+            DBHelper
+                .getIndexDbOperatingHoursByRestaurantId(restaurant_id, (error, result) => {
+                    if (error) resolve(restaurant);
+                    resolve(result);
+                })
+        })
+            .then((restaurant, operating_hours) => {
+                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-restaurant=' + (restaurant));
+                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-operating_hours=' + (operating_hours));
+
+                if (!restaurant) return callback('no restaurant data', null);
+
+                return new Promise((resolve, reject) => {
+                    // add missing properties
+                    if (!restaurant.id) restaurant.id = restaurant.restaurant_id;
+                    if (!restaurant.restaurant_id) restaurant.restaurant_id = restaurant.id;
+                    if (!restaurant.latlng) restaurant.latlng = {};
+                    if (!restaurant.latlng.lat) restaurant.latlng.lat = (restaurant.lat ? restaurant.lat : '');
+                    if (!restaurant.latlng.lng) restaurant.latlng.lng = (restaurant.lng ? restaurant.lng : '');
+                    if (!restaurant.operating_hours) restaurant.operating_hours = {};
+                    if (!restaurant.reviews) restaurant.reviews = {};
+
+                    if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-restaurant.operating_hours=' + (restaurant.operating_hours));
+
+                    if (restaurant.operating_hours) {
+                        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-restaurant.operating_hours.hasOwnProperty(day)=' + (restaurant.operating_hours.hasOwnProperty('day')));
+                        if (restaurant.operating_hours.hasOwnProperty('day')) {
+                            restaurant.operating_hours.map(operating_hour => {
+                                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-operating_hour=' + (operating_hour.day));
+                            });
+                        }
+                    }
+
+                    if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-operating_hours=' + (operating_hours));
+                    if (operating_hours) {
+                        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-operating_hours.operating_hours.hasOwnProperty(day)=' + (operating_hours.hasOwnProperty('day')));
+                        if (operating_hours.hasOwnProperty('day')) {
+                            operating_hours.map(operating_hour => {
+                                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-operating_hour=' + (operating_hour.day));
+                            });
+                            restaurant.operating_hours = operating_hours;
+                        }
+                    }
+
+                    // confirm property
+                    if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second)-restaurant.operating_hours=' + (restaurant.operating_hours));
+
+                    resolve(restaurant);
+                })
+                    .then((restaurant) => {
+                        return new Promise((resolve, reject) => {
+                            if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(third)-getReviewsByRestaurantId()-call');
+                            DBHelper.getReviewsByRestaurantId(restaurant_id, (error, result) => {
+                                if (error) resolve({});
+                                resolve(result);
+                            });
+                        })
+                            .then((reviews) => {
+                                reviews.map(review => {
+                                    if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(fourth)-getReviewsByRestaurantId()-review.review_id=' + (review.review_id));
                                 });
-                        }
-                        else return this.operating_hours;
+                                restaurant.reviews = reviews;
+                                return restaurant;
+                            });
                     })
-                    .then((all_operating_hours) => {
-                        if (all_operating_hours) {
-                            let operating_hours = all_operating_hours;
-                            if (typeof all_operating_hours.filter === 'function') {
-                                operating_hours = all_operating_hours.filter(r => r.restaurant_id == restaurant.restaurant_id);
-                            }
-                            return operating_hours;
-                        }
-                        else return [];
-                    });
-                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(second-sub)-restaurant.id=' + (restaurant.id));
-                return restaurant;
-            })
-            .then((restaurant) => {
-                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(third)-restaurant.id=' + (restaurant.id));
-                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(third)-restaurant.reviews=' + (restaurant.reviews));
-                if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(third)-restaurant.operating_hours=' + (restaurant.operating_hours));
-                callback(null, restaurant);
-                return;
+                    .then((restaurant) => {
+                        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(fifth)-restaurant.id=' + (restaurant.id));
+                        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(fifth)-restaurant.restaurant_id=' + (restaurant.restaurant_id));
+                        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(fifth)-restaurant.reviews=' + (restaurant.reviews));
+                        restaurant.reviews.map(review => {
+                            if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(fifth)-review.review_id=' + (review.review_id));
+                        });
+                        if (debug) console.log('dbhelper-getRestaurantReviewsOperatingHours()-.then(fifth)-restaurant.operating_hours=' + (restaurant.operating_hours));
+                        callback(null, restaurant);
+                        return;
+                    })
             })
             .catch(error => {
                 // Oops!. Got an error from server.
-                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getRestaurantReviewsOperatingHours()`);
-                callback(error.message, null);
+                const error_message = (`Request failed. Returned status of ${error.message} - dbhelper-getRestaurantReviewsOperatingHours()`);
+                callback(error_message, null);
                 return;
             });
     }
@@ -1212,50 +1260,33 @@ class DBHelper {
         if (debug) console.log('dbhelper-getReviewsByRestaurantId()');
         if (debug) console.log('restaurant_id=' + (restaurant_id));
 
-        let reviews = this.reviews;
+        return new Promise((resolve, reject) => {
+            if (!this.reviews) {
+                DBHelper
+                    .getAllReviews((error, result) => {
+                        if (error) resolve({});
+                        resolve(result);
+                    });
+            }
+            else resolve(this.reviews);
+        })
+            .then((reviews) => {
+                if (!reviews) callback('No reviews for this restaurant', null);
 
-        return dbPromise
-            .then(() => {
-                reviews = this.reviews;
-                if (!reviews) {
-                    return DBHelper
-                        .getAllReviews((error, result) => {
-                            if (debug) console.log('dbhelper-getReviewsByRestaurantId()-getAllReviews()-result=' + (result));
-                            if (error) return false;
-                            if (result) return true;
-                        });
-                }
-                return true;
+                this.reviews = reviews;
+                return reviews;
             })
-            .then(() => {
-                reviews = this.reviews;
-
-                // get select restaurant
-                let restaurant_reviews = this.reviews;
-                if (restaurant_reviews) {
-                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()-reviews[0]=' + (restaurant_reviews[0]));
-
-                    if (typeof restaurant_reviews.filter === 'function') {
-                        restaurant_reviews = restaurant_reviews.filter(r => r.restaurant_id == restaurant_id);
-                    }
-                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - third - results =' + (restaurant_reviews));
-                }
-                if (!restaurant_reviews) {
-                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()-fetchReviewsByRestaurantId()');
-                    return DBHelper.fetchReviewsByRestaurantId(restaurant_id, (error, result) => {
-                        if (error) return [];
-                        if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - callback1 - results =' + (result));
-                        return result;
-                    })
-                        .then(restaurant_reviews => {
-                            if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - callback1-then - results =' + (restaurant_reviews));
-                            return callback(null, restaurant_reviews);
-                        });
-                }
-                else {
-                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()- is reviews array empty - callback2 - results =' + (restaurant_reviews));
-                    return callback(null, restaurant_reviews);
-                }
+            .then((reviews) => {
+                const restaurant_reviews = reviews.filter(r => r.restaurant_id == restaurant_id);
+                restaurant_reviews.map(review => {
+                    if (debug) console.log('dbhelper-getReviewsByRestaurantId()-review.review_id=' + (review.review_id));
+                });
+                return callback(null, restaurant_reviews);
+            })
+            .catch(error => {
+                // Oops!. Got an error from server.
+                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getReviewsByRestaurantId()`);
+                return callback(error.message, null);
             });
     }
 
@@ -1291,13 +1322,22 @@ class DBHelper {
             });
     }
 
-
     static getAllIndexDbOperatingHours(callback) {
         if (debug) console.log('dbhelper-getAllIndexDbOperatingHours()');
         dbPromise.then(db => {
             const txOperatingHours = db.transaction('operating_hours', 'readonly');
             const operatingHoursStore = txOperatingHours.objectStore('operating_hours');
             const allOperatingHours = operatingHoursStore.getAll();
+            return callback(null, allOperatingHours);
+        });
+    }
+
+    static getIndexDbOperatingHoursByRestaurantId(restaurant_id, callback) {
+        if (debug) console.log('dbhelper-getIndexDbOperatingHoursByRestaurantId()');
+        dbPromise.then(db => {
+            const txOperatingHours = db.transaction('operating_hours', 'readonly');
+            const operatingHoursStore = txOperatingHours.objectStore('operating_hours');
+            const allOperatingHours = operatingHoursStore.get(restaurant_id);
             return callback(null, allOperatingHours);
         });
     }
@@ -1499,26 +1539,26 @@ class DBHelper {
 
                 return reviewStore
                     .get(review.review_id)
-                    .then(function (item) {
+                    .then((review, item) => {
+                        const rtNewItem = {
+                            review_id: parseInt((item ? item.review_id : idMax)),
+                            restaurant_id: parseInt(review.restaurant_id),
+                            name: review.name,
+                            rating: parseInt(review.rating),
+                            comments: review.comments,
+                            updatedAt: review.updatedAt,
+                            createdAt: review.createdAt
+                        };
                         if (!item) {
                             if (debug) console.log('add review item');
-                            const rtNewItem = [{
-                                review_id: idMax,
-                                restaurant_id: parseInt(review.restaurant_id),
-                                name: review.name,
-                                rating: parseInt(review.rating),
-                                comments: review.comments,
-                                updatedAt: review.updatedAt,
-                                createdAt: review.createdAt
-                            }];
-                            reviewStore.add(rtNewItem[0]);
-                            if (debug) console.log('review item added');
+                            reviewStore.add(rtNewItem);
                         }
                         else {
                             if (debug) console.log('update review item');
-                            reviewStore.put(review);
+                            reviewStore.put(rtNewItem);
                         }
                         txReview.complete;
+                        if (debug) console.log('review item added/updated');
 
                         if (debug) console.log('tx complete - callback');
                         return callback(null, true);
