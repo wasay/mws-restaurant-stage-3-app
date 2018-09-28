@@ -277,6 +277,8 @@ createFavoriteHTML = (restaurant) => {
 
     if (debug) console.log('app-createFavoriteHTML-restaurant.id=' + (restaurant.id));
     if (debug) console.log('app-createFavoriteHTML-restaurant.is_favorite=' + (restaurant.is_favorite));
+    if (debug) console.log('app-createFavoriteHTML-restaurant.lat=' + (restaurant.lat));
+    if (debug) console.log('app-createFavoriteHTML-restaurant.latlng.lat=' + (restaurant.latlng.lat));
 
     let is_favorite = ((restaurant.is_favorite) && restaurant.is_favorite.toString() === 'true') ? true : false;
     if (debug) console.log('app-createFavoriteHTML-is_favorite=' + (is_favorite));

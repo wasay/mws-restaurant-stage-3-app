@@ -34,14 +34,14 @@ window.initMap = () => {
  * Get current restaurant from page URL.
  */
 getRestaurantFromURL = (callback) => {
-    debug = true;
-    if (debug) console.log('restaurant-fetchRestaurantFromURL()');
+
+    if (debug) console.log('restaurant-getRestaurantFromURL()');
     if (self.restaurant) { // restaurant already fetched!
         callback(null, self.restaurant);
         return;
     }
     const id = getParameterByName('id');
-    if (debug) console.log('restaurant-fetchRestaurantFromURL() - restaurant_id=' + (id));
+    if (debug) console.log('restaurant-getRestaurantFromURL() - restaurant_id=' + (id));
     let error;
     if (!id) { // no id found in URL
         error = 'No restaurant id in URL';
@@ -49,26 +49,28 @@ getRestaurantFromURL = (callback) => {
     }
     else {
         new Promise((resolve, reject) => {
-            if (debug) console.log('restaurant-fetchRestaurantFromURL()-getRestaurantById() - call');
-            DBHelper.getRestaurantById(id, (error, restaurant) => {
-                if (debug) console.log('restaurant-fetchRestaurantFromURL()-getRestaurantById()-error=' + (error));
-                if (debug) console.log('restaurant-fetchRestaurantFromURL()-getRestaurantById()-restaurant=' + (restaurant));
+            if (debug) console.log('restaurant-getRestaurantFromURL()-getRestaurantById() - call');
+            DBHelper.getRestaurantById(id, (error, result) => {
+                if (debug) console.log('restaurant-getRestaurantFromURL()-getRestaurantById()-error=' + (error));
+                if (debug) console.log('restaurant-getRestaurantFromURL()-getRestaurantById()-result=' + (result));
                 if (error) reject(false);
-                resolve(restaurant);
+                resolve(result);
             });
         })
             .then((restaurant) => {
-                if (debug) console.log('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result');
-                if (error) {
-                    console.log(error + ('restaurant-fetchRestaurantFromURL() - getRestaurantById()-result'));
-                    return;
-                }
                 if (!restaurant) {
-                    if (debug) console.log('restaurant-fetchRestaurantFromURL() - No restaurant info found');
+                    if (debug) console.log('restaurant-getRestaurantFromURL() - No restaurant info found');
                     return;
                 }
 
+                if (debug) console.log('restaurant-getRestaurantFromURL()-restaurant.restaurant_id=' + (restaurant.restaurant_id));
+                if (debug) console.log('restaurant-getRestaurantFromURL()-restaurant.reviews=' + (restaurant.reviews));
+                if (debug) console.log('restaurant-getRestaurantFromURL()-restaurant.operating_hours=' + (restaurant.operating_hours));
+
                 self.restaurant = restaurant;
+                self.restaurant.reviews = restaurant.reviews;
+                self.restaurant.operating_hours = restaurant.operating_hours;
+
                 fillRestaurantHTML();
                 callback(null, restaurant);
             })
@@ -153,7 +155,7 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
  * Create all reviews HTML and add them to the webpage.
  */
 fillReviewsHTML = (reviews = self.restaurant.reviews) => {
-    debug = true;
+
     if (debug) console.log('restaurant-fillReviewsHTML()');
 
     const container = document.getElementById('reviews-container');
@@ -185,45 +187,16 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
         container.appendChild(noReviews);
         const br = document.createElement('br');
         container.appendChild(br);
-        return;
     }
-    const ul = document.getElementById('reviews-list');
-
-
-    if (debug) console.log('restaurant-fillReviewsHTML()-reviews.restaurant_id=' + (reviews.restaurant_id));
-    /*
-        let restaurant_reviews = reviews;
-        if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
-        if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - first - results =' + (restaurant_reviews));
-
-        dbPromise
-        .then(() => {
-            if (!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0) {
-                if (debug) console.log('restaurant-fillReviewsHTML()-getReviewsByRestaurantId()');
-                restaurant_reviews = DBHelper.getReviewsByRestaurantId(self.restaurant.restaurant_id, (error, result) => {
-                    if (error) return;
-                    return result;
-                })
-                    .then((reviews) => reviews);
-            }
-            return restaurant_reviews;
-        })
-            .then((restaurant_reviews) => {
-                if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second =' + ((!Array.isArray(restaurant_reviews) || restaurant_reviews.length === 0)));
-                if (debug) console.log('restaurant-fillReviewsHTML()- is reviews array empty - second - results =' + (restaurant_reviews));
-                restaurant_reviews.forEach(review => {
-                    ul.appendChild(createReviewHTML(review));
-                });
-            // reviews.forEach(review => {
-            //     ul.appendChild(createReviewHTML(review));
-                // });
-                // for (let i = 0; i <= reviews.length; i++) {
-                //     ul.appendChild(createReviewHTML(reviews[i]));
-                // }
-            });
-    */
-    container.appendChild(ul);
-// debug = false;
+    else
+    {
+        const ul = document.getElementById('reviews-list');
+        reviews.map(review => {
+            if (debug) console.log('restaurant-fillReviewsHTML()-review.restaurant_id=' + (review.restaurant_id));
+            ul.appendChild(createReviewHTML(review));
+        });
+        container.appendChild(ul);
+    }
 };
 
 /**
