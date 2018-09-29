@@ -5,7 +5,7 @@ self.importScripts('js/idb.js');
 
 self.importScripts('js/dbhelper.min.js');
 
-debug = false;
+//debug = false;
 
 if (debug) console.log('start /sw.js');
 
@@ -14,6 +14,11 @@ self.addEventListener('install', function (event) {
 
     // The promise that skipWaiting() returns can be safely ignored.
     self.skipWaiting();
+
+    // DBHelper.v1LoadData((error, result) => {
+    //     DBHelper.debugRestaurantInfo(error, 'dbhelper-v1LoadData-error');
+    //     DBHelper.debugRestaurantInfo(result, 'dbhelper-v1LoadData-result');
+    // });
 
     event.waitUntil(
         caches.open(DBHelper.staticCacheName).then(function (cache) {

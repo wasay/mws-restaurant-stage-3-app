@@ -1,6 +1,6 @@
 // js/index.js
 
-if (debug) console.log('start /js/index.js');
+//DBHelper.debugRestaurantInfo('', 'start /js/index.js');
 
 let neighborhoods,
     cuisines;
@@ -11,21 +11,38 @@ let markers = [];
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
  */
 document.addEventListener('DOMContentLoaded', (event) => {
-    //console.log('main-DOMContentLoaded()');
-    dbPromise
-    .then(() => {
-        fetchNeighborhoods();
-        return true;
+    //DBHelper.debugRestaurantInfo('', 'index-DOMContentLoaded()');
+
+    new Promise((resolve, reject) => {
+        DBHelper.v1LoadData((error, result) => {
+            DBHelper.debugRestaurantInfo(error, 'dbhelper-new Promise-v1LoadData-error');
+            DBHelper.debugRestaurantInfo(result, 'dbhelper-new Promise-v1LoadData-result');
+            resolve(result);
+        });
+    }).then(() => {
+        return new Promise((resolve, reject) => {
+            fetchNeighborhoods((error, result) => {
+                resolve(true);
+            });
+        });
+    }).then(() => {
+        return new Promise((resolve, reject) => {
+            fetchCuisines((error, result) => {
+                resolve(true);
+            });
+        });
+    }).then(() => {
+        lazyLoadImages();
     })
-    .then(() => {
-        fetchCuisines();
-        return true;
-    });
-    lazyLoadImages();
+        .catch(error => {
+            console.log('Error: ' + (error));
+        });
+
 });
 
-
 lazyLoadImages = () => {
+    //DBHelper.debugRestaurantInfo('', 'index-lazyLoadImages()');
+
     let lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
 
     if ("IntersectionObserver" in window) {
@@ -54,24 +71,35 @@ lazyLoadImages = () => {
  * Fetch all neighborhoods and set their HTML.
  */
 fetchNeighborhoods = () => {
-    if (debug) console.log('index-fetchNeighborhoods()');
-    DBHelper.fetchNeighborhoods((error, neighborhoods) => {
-        if (debug) console.log('index-fetchNeighborhoods-neighborhoods()');
-        if (error) { // Got an error
-            console.error(error);
-        }
-        else {
+    //DBHelper.debugRestaurantInfo('', 'index-fetchNeighborhoods()');
+
+    return new Promise((resolve, reject) => {
+        DBHelper.fetchNeighborhoods((error, neighborhoods) => {
+            DBHelper.debugRestaurantInfo(error, 'index-fetchCuisines()-DBHelper.fetchNeighborhoods-error');
+            DBHelper.debugRestaurantInfo(neighborhoods, 'index-fetchCuisines()-DBHelper.fetchNeighborhoods-neighborhoods');
+
+            if (error) reject(false);
+            resolve(neighborhoods);
+        });
+    }).then((neighborhoods) => {
+        if (neighborhoods) {
             self.neighborhoods = neighborhoods;
             fillNeighborhoodsHTML();
         }
-    });
+    })
+        .catch(error => {
+            // Oops!. Got an error from server.
+            console.log(error + '-index-fetchNeighborhoods()-catch');
+        });
 };
 
 /**
  * Set neighborhoods HTML.
  */
 fillNeighborhoodsHTML = (neighborhoods = self.neighborhoods) => {
-    if (debug) console.log('index-fillNeighborhoodsHTML()');
+    //DBHelper.debugRestaurantInfo('', 'index-fillNeighborhoodsHTML()');
+    //DBHelper.debugRestaurantInfo(neighborhoods, 'index-fillNeighborhoodsHTML()-neighborhoods');
+
     const select = document.getElementById('neighborhoods-select');
     neighborhoods.forEach(neighborhood => {
         const option = document.createElement('option');
@@ -85,23 +113,35 @@ fillNeighborhoodsHTML = (neighborhoods = self.neighborhoods) => {
  * Fetch all cuisines and set their HTML.
  */
 fetchCuisines = () => {
-    if (debug) console.log('index-fetchCuisines()');
-    DBHelper.fetchCuisines((error, cuisines) => {
-        if (error) { // Got an error!
-            console.error(error);
-        }
-        else {
+    //DBHelper.debugRestaurantInfo('', 'index-fetchCuisines()');
+
+    return new Promise((resolve, reject) => {
+        DBHelper.fetchCuisines((error, cuisines) => {
+            //DBHelper.debugRestaurantInfo(error, 'index-fetchCuisines()-DBHelper.fetchCuisines-error');
+            //DBHelper.debugRestaurantInfo(cuisines, 'index-fetchCuisines()-DBHelper.fetchCuisines-cuisines');
+
+            if (error) reject(false);
+            resolve(neighborhoods);
+        });
+    }).then((cuisines) => {
+        if (cuisines) {
             self.cuisines = cuisines;
             fillCuisinesHTML();
         }
-    });
+    })
+        .catch(error => {
+            // Oops!. Got an error from server.
+            console.log(error + '-index-fetchCuisines()-catch');
+        });
 };
 
 /**
  * Set cuisines HTML.
  */
 fillCuisinesHTML = (cuisines = self.cuisines) => {
-    if (debug) console.log('index-fillCuisinesHTML()');
+    //DBHelper.debugRestaurantInfo('', 'index-fillCuisinesHTML()');
+    //DBHelper.debugRestaurantInfo(cuisines, 'index-fillCuisinesHTML()-cuisines');
+
     const select = document.getElementById('cuisines-select');
 
     cuisines.forEach(cuisine => {
@@ -116,7 +156,8 @@ fillCuisinesHTML = (cuisines = self.cuisines) => {
  * Initialize Google map, called from HTML.
  */
 window.initMap = () => {
-    if (debug) console.log('index-initMap()');
+    //DBHelper.debugRestaurantInfo('', 'index-initMap()');
+
     let loc = {
         lat: 40.722216,
         lng: -73.987501
@@ -133,7 +174,8 @@ window.initMap = () => {
  * Update page and map for current restaurants.
  */
 updateRestaurants = () => {
-    if (debug) console.log('index-updateRestaurants()');
+    //DBHelper.debugRestaurantInfo('', 'index-updateRestaurants()');
+
     const cSelect = document.getElementById('cuisines-select');
     const nSelect = document.getElementById('neighborhoods-select');
 
@@ -143,22 +185,36 @@ updateRestaurants = () => {
     const cuisine = cSelect[cIndex].value;
     const neighborhood = nSelect[nIndex].value;
 
-    DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
-        if (error) { // Got an error!
-            console.error(error);
-        }
-        else {
-            resetRestaurants(restaurants);
-            fillRestaurantsHTML();
-        }
+    //DBHelper.debugRestaurantInfo(cuisine, 'index-updateRestaurants()-cuisine');
+    //DBHelper.debugRestaurantInfo(neighborhood, 'index-updateRestaurants()-neighborhood');
+
+    new Promise((resolve, reject) => {
+        DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, result) => {
+            //DBHelper.debugRestaurantInfo(error, 'index-updateRestaurants()-fetchRestaurantByCuisineAndNeighborhood()-error');
+            //DBHelper.debugRestaurantInfo(result, 'index-updateRestaurants()-fetchRestaurantByCuisineAndNeighborhood()-result');
+            if (error) reject(false);
+            resolve(result);
+        })
     })
+        .then((restaurants) => {
+            if (restaurants) {
+                resetRestaurants(restaurants);
+                fillRestaurantsHTML();
+            }
+        })
+        .catch(error => {
+            // Oops!. Got an error from server.
+            console.log(error + '-index-updateRestaurants()-catch');
+        });
 };
 
 /**
  * Clear current restaurants, their HTML and remove their map markers.
  */
 resetRestaurants = (restaurants) => {
-    if (debug) console.log('index-resetRestaurants()');
+    //DBHelper.debugRestaurantInfo('', 'index-resetRestaurants()');
+    //DBHelper.debugRestaurantInfo(restaurants, 'index-fillRestaurantsHTML()-restaurants');
+
     // Remove all restaurants
     self.restaurants = [];
     const ul = document.getElementById('restaurants-list');
@@ -177,6 +233,9 @@ resetRestaurants = (restaurants) => {
  */
 fillRestaurantsHTML = (restaurants = self.restaurants) => {
     if (debug) console.log('index-fillRestaurantsHTML()');
+    //DBHelper.debugRestaurantInfo(restaurants, 'index-fillRestaurantsHTML()-restaurants');
+
+    if (debug) console.log('index-fillRestaurantsHTML()');
     const ul = document.getElementById('restaurants-list');
     restaurants.forEach(restaurant => {
         ul.append(createRestaurantHTML(restaurant));
@@ -189,6 +248,8 @@ fillRestaurantsHTML = (restaurants = self.restaurants) => {
  */
 createRestaurantHTML = (restaurant) => {
     if (debug) console.log('index-createRestaurantHTML()');
+    //DBHelper.debugRestaurantInfo(restaurant, 'index-createRestaurantHTML()-restaurant');
+
     if (!restaurant) {
         return false;
     }
@@ -250,12 +311,10 @@ createRestaurantHTML = (restaurant) => {
  */
 addMarkersToMap = (restaurants = self.restaurants) => {
     if (debug) console.log('index-addMarkersToMap()');
-    if (restaurants)
-    {
+    if (restaurants) {
         restaurants.forEach(restaurant => {
             // Add marker to the map
-            if (restaurant)
-            {
+            if (restaurant) {
                 const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
                 google.maps.event.addListener(marker, 'click', () => {
                     window.location.href = marker.url
@@ -271,17 +330,14 @@ addMarkersToMap = (restaurants = self.restaurants) => {
  * Create restaurant HTML.
  */
 createFavoriteHTML = (restaurant) => {
+    //DBHelper.debugRestaurantInfo('', 'index-createFavoriteHTML()');
+    //DBHelper.debugRestaurantInfo(restaurant, 'index-createFavoriteHTML()-restaurant');
     if (!restaurant) {
         return false;
     }
 
-    if (debug) console.log('app-createFavoriteHTML-restaurant.id=' + (restaurant.id));
-    if (debug) console.log('app-createFavoriteHTML-restaurant.is_favorite=' + (restaurant.is_favorite));
-    if (debug) console.log('app-createFavoriteHTML-restaurant.lat=' + (restaurant.lat));
-    if (debug) console.log('app-createFavoriteHTML-restaurant.latlng.lat=' + (restaurant.latlng.lat));
-
     let is_favorite = ((restaurant.is_favorite) && restaurant.is_favorite.toString() === 'true') ? true : false;
-    if (debug) console.log('app-createFavoriteHTML-is_favorite=' + (is_favorite));
+    //DBHelper.debugRestaurantInfo(is_favorite, 'index-createFavoriteHTML()-is_favorite');
 
     const objFavorite = document.createElement('a');
     objFavorite.className = 'favorite ' + (is_favorite ? 'is-favorite' : 'not-favorite');
