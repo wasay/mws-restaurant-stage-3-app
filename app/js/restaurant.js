@@ -6,23 +6,95 @@ let restaurant;
 let reviews;
 let map;
 
+// debug = true;
+
+/**
+ * document content load
+ */
+document.addEventListener('DOMContentLoaded', (event) => {
+    DBHelper.debugRestaurantInfo('', 'restaurant-DOMContentLoaded()');
+
+    new Promise((resolve, reject) => {
+        //DBHelper.debugRestaurantInfo('', 'restaurant-DOMContentLoaded()-1-v1LoadData()-call');
+        DBHelper.v1LoadData((error, result) => {
+            //DBHelper.debugRestaurantInfo(error, 'restaurant-DOMContentLoaded()-v1LoadData-error');
+            //DBHelper.debugRestaurantInfo(result, 'restaurant-DOMContentLoaded()-v1LoadData-result');
+            resolve(result);
+        });
+    })
+        .then((result) => {
+            //DBHelper.debugRestaurantInfo(result, 'restaurant-DOMContentLoaded()-5-1-result');
+
+            //DBHelper.debugRestaurantInfo('', 'restaurant-DOMContentLoaded()-5-1-lazyLoadImages()-call');
+            lazyLoadImages();
+        })
+        .catch(error => {
+            console.log('restaurant-Error: ' + (error));
+        });
+
+});
+
+lazyLoadImages = () => {
+    DBHelper.debugRestaurantInfo('', 'index-lazyLoadImages()');
+
+    let lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+
+    if ("IntersectionObserver" in window) {
+        let lazyImageObserver = new IntersectionObserver(function (entries, observer) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    let lazyImage = entry.target;
+                    lazyImage.src = lazyImage.dataset.src;
+                    lazyImage.srcset = lazyImage.dataset.srcset;
+                    lazyImage.classList.remove("lazy");
+                    lazyImageObserver.unobserve(lazyImage);
+                }
+            });
+        });
+
+        lazyImages.forEach(function (lazyImage) {
+            lazyImageObserver.observe(lazyImage);
+        });
+    }
+    else {
+        // Possibly fall back to a more compatible method here
+    }
+};
+
+
 /**
  * Initialize Google map, called from HTML.
  */
 window.initMap = () => {
-    //console.log('restaurant_info-initMap()');
+    DBHelper.debugRestaurantInfo('', 'restaurant-initMap()');
+
     getRestaurantFromURL((error, restaurant) => {
+        //DBHelper.debugRestaurantInfo(error, 'restaurant-initMap()-getRestaurantFromURL()-error');
+        //DBHelper.debugRestaurantInfo(restaurant, 'restaurant-initMap()-getRestaurantFromURL()-restaurant');
         if (error) { // Got an error!
             console.error(error);
         }
         else if (restaurant) {
-            self.map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 16,
-                center: restaurant.latlng,
-                scrollwheel: false
-            });
             fillBreadcrumb();
-            DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
+            // Add marker to the map
+            if (restaurant) {
+                let loc = {};
+                if (restaurant.latlng) loc = restaurant.latlng;
+                else if (restaurant.lat) loc = {lat: restaurant.lat, lng: restaurant.lng};
+                if ( ! loc || typeof loc === 'undefined' || loc.length === 0) {
+                    loc = {
+                        lat: 40.722216,
+                        lng: -73.987501
+                    };
+                }
+                DBHelper.debugRestaurantInfo(loc, 'dbhelper-mapMarkerForRestaurant()-loc');
+                self.map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 16,
+                    center: loc,
+                    scrollwheel: false
+                });
+                DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
+            }
         }
         else {
             console.error('Unable to retrive restaurant info');
@@ -34,14 +106,15 @@ window.initMap = () => {
  * Get current restaurant from page URL.
  */
 getRestaurantFromURL = (callback) => {
+    DBHelper.debugRestaurantInfo('', 'restaurant-getRestaurantFromURL()');
 
-    if (debug) console.log('restaurant-getRestaurantFromURL()');
     if (self.restaurant) { // restaurant already fetched!
         callback(null, self.restaurant);
         return;
     }
     const id = getParameterByName('id');
-    if (debug) console.log('restaurant-getRestaurantFromURL() - restaurant_id=' + (id));
+    DBHelper.debugRestaurantInfo(id, 'restaurant-getRestaurantFromURL()-id');
+
     let error;
     if (!id) { // no id found in URL
         error = 'No restaurant id in URL';
@@ -49,23 +122,19 @@ getRestaurantFromURL = (callback) => {
     }
     else {
         new Promise((resolve, reject) => {
-            if (debug) console.log('restaurant-getRestaurantFromURL()-getRestaurantById() - call');
+            DBHelper.debugRestaurantInfo('', 'restaurant-getRestaurantFromURL()-getRestaurantById() - call');
             DBHelper.getRestaurantById(id, (error, result) => {
-                if (debug) console.log('restaurant-getRestaurantFromURL()-getRestaurantById()-error=' + (error));
-                if (debug) console.log('restaurant-getRestaurantFromURL()-getRestaurantById()-result=' + (result));
+                DBHelper.debugRestaurantInfo(error, 'restaurant-getRestaurantFromURL()-getRestaurantById()-error');
+                DBHelper.debugRestaurantInfo(result, 'restaurant-getRestaurantFromURL()-getRestaurantById()-result');
                 if (error) reject(false);
                 resolve(result);
             });
         })
             .then((restaurant) => {
+                DBHelper.debugRestaurantInfo(restaurant, 'restaurant-getRestaurantFromURL()-restaurant');
                 if (!restaurant) {
-                    if (debug) console.log('restaurant-getRestaurantFromURL() - No restaurant info found');
                     return;
                 }
-
-                if (debug) console.log('restaurant-getRestaurantFromURL()-restaurant.restaurant_id=' + (restaurant.restaurant_id));
-                if (debug) console.log('restaurant-getRestaurantFromURL()-restaurant.reviews=' + (restaurant.reviews));
-                if (debug) console.log('restaurant-getRestaurantFromURL()-restaurant.operating_hours=' + (restaurant.operating_hours));
 
                 self.restaurant = restaurant;
                 self.restaurant.reviews = restaurant.reviews;
@@ -75,8 +144,8 @@ getRestaurantFromURL = (callback) => {
                 callback(null, restaurant);
             })
             .catch(error => {
-                console.log('No Restaurant data');
-                return;
+                console.log('restaurant - ' + (error) + ' - catch');
+                callback(error.message, null);
             });
     }
 }
@@ -85,6 +154,8 @@ getRestaurantFromURL = (callback) => {
  * Create restaurant HTML and add it to the webpage
  */
 fillRestaurantHTML = (restaurant = self.restaurant) => {
+    DBHelper.debugRestaurantInfo('', 'restaurant-fillRestaurantHTML()');
+    DBHelper.debugRestaurantInfo(restaurant, 'restaurant-fillRestaurantHTML()-restaurant');
     if (!restaurant) {
         return;
     }
@@ -134,7 +205,8 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
  * Create restaurant operating hours HTML table and add it to the webpage.
  */
 fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => {
-    //console.log('restaurant_info-fillRestaurantHoursHTML()');
+    DBHelper.debugRestaurantInfo('', 'restaurant-fillRestaurantHoursHTML()');
+    DBHelper.debugRestaurantInfo(operatingHours, 'restaurant-fillRestaurantHoursHTML()-operatingHours');
     const hours = document.getElementById('restaurant-hours');
     for (let key in operatingHours) {
         const row = document.createElement('tr');
@@ -155,8 +227,9 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
  * Create all reviews HTML and add them to the webpage.
  */
 fillReviewsHTML = (reviews = self.restaurant.reviews) => {
+    DBHelper.debugRestaurantInfo('', 'restaurant-fillReviewsHTML()');
+    DBHelper.debugRestaurantInfo(reviews, 'restaurant-fillReviewsHTML()-reviews');
 
-    if (debug) console.log('restaurant-fillReviewsHTML()');
 
     const container = document.getElementById('reviews-container');
     const title = document.createElement('h2');
@@ -188,13 +261,14 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
         const br = document.createElement('br');
         container.appendChild(br);
     }
-    else
-    {
+    else {
         const ul = document.getElementById('reviews-list');
-        reviews.map(review => {
-            if (debug) console.log('restaurant-fillReviewsHTML()-review.restaurant_id=' + (review.restaurant_id));
-            ul.appendChild(createReviewHTML(review));
-        });
+        if (reviews && reviews.length > 0) {
+            reviews.forEach(review => {
+                if (debug) console.log('restaurant-fillReviewsHTML()-review.restaurant_id=' + (review.restaurant_id));
+                ul.appendChild(createReviewHTML(review));
+            });
+        }
         container.appendChild(ul);
     }
 };
@@ -203,7 +277,9 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
  * Create review HTML and add it to the webpage.
  */
 createReviewHTML = (review) => {
-    if (debug) console.log('restaurant-createReviewHTML()');
+    DBHelper.debugRestaurantInfo('', 'restaurant-createReviewHTML()');
+    DBHelper.debugRestaurantInfo(review, 'restaurant-createReviewHTML()-review');
+
     const li = document.createElement('li');
     const name = document.createElement('p');
     name.innerHTML = review.name;
@@ -229,7 +305,9 @@ createReviewHTML = (review) => {
  * Add restaurant name to the breadcrumb navigation menu
  */
 fillBreadcrumb = (restaurant = self.restaurant) => {
-    if (debug) console.log('restaurant-fillBreadcrumb()');
+    DBHelper.debugRestaurantInfo('', 'restaurant-fillBreadcrumb()');
+    DBHelper.debugRestaurantInfo(restaurant, 'restaurant-fillBreadcrumb()-restaurant');
+
     const breadcrumb = document.getElementById('breadcrumb');
     const li = document.createElement('li');
     li.innerHTML = restaurant.name;
@@ -260,15 +338,16 @@ getParameterByName = (name, url) => {
  * Create restaurant HTML.
  */
 createFavoriteHTML = (restaurant) => {
+    DBHelper.debugRestaurantInfo('', 'restaurant-createFavoriteHTML()');
+
     if (!restaurant) {
         return false;
     }
+    DBHelper.debugRestaurantInfo(restaurant.restaurant_id, 'restaurant-createFavoriteHTML()-restaurant.restaurant_id');
+    DBHelper.debugRestaurantInfo(restaurant.is_favorite, 'restaurant-createFavoriteHTML()-restaurant.is_favorite');
 
-    if (debug) console.log('app-createFavoriteHTML-restaurant.restaurant_id=' + (restaurant.restaurant_id));
-    if (debug) console.log('app-createFavoriteHTML-restaurant.is_favorite=' + (restaurant.is_favorite));
-
-    let is_favorite = ((restaurant.is_favorite) && restaurant.is_favorite.toString() === 'true') ? true : false;
-    if (debug) console.log('app-createFavoriteHTML-is_favorite=' + (is_favorite));
+    let is_favorite = ((restaurant && restaurant.is_favorite && restaurant.is_favorite.toString() === 'true') ? true : false);
+    DBHelper.debugRestaurantInfo(is_favorite, 'restaurant-createFavoriteHTML()-is_favorite');
 
     const objFavorite = document.createElement('a');
     objFavorite.className = 'favorite ' + (is_favorite ? 'is-favorite' : 'not-favorite');
@@ -293,9 +372,10 @@ createFavoriteHTML = (restaurant) => {
  * set Restaurant favorite.
  */
 function setRestaurantFavorite(restaurant, objFavorite, is_favorite) {
-    if (debug) console.log('app-setRestaurantFavorite()');
-    if (debug) console.log('app-setRestaurantFavorite-is_favorite=' + (is_favorite));
-    if (debug) console.log('app-setRestaurantFavorite-typeof objFavorite=' + (typeof objFavorite));
+    DBHelper.debugRestaurantInfo('', 'restaurant-setRestaurantFavorite()');
+    DBHelper.debugRestaurantInfo(restaurant, 'restaurant-setRestaurantFavorite()-restaurant');
+    DBHelper.debugRestaurantInfo(objFavorite, 'restaurant-setRestaurantFavorite()-objFavorite');
+    DBHelper.debugRestaurantInfo(is_favorite, 'restaurant-setRestaurantFavorite()-is_favorite');
 
     // toggel favorite value
     is_favorite = !is_favorite;
@@ -334,12 +414,17 @@ function setRestaurantFavorite(restaurant, objFavorite, is_favorite) {
 
 
 function saveNewReview(callback) {
+    DBHelper.debugRestaurantInfo('', 'restaurant-setRestaurantFavorite()');
     const restaurant_id = getParameterByName('id', document.location.href);
-    if (debug) console.log('restaurant_id=' + (restaurant_id));
+
     const name = document.getElementById('d_name').value;
     const ratingObj = document.getElementById("d_rating");
     const rating = ratingObj.options[ratingObj.selectedIndex].value;
     const comments = document.getElementById('d_comments').value;
+
+    DBHelper.debugRestaurantInfo(restaurant_id, 'restaurant-setRestaurantFavorite()-restaurant_id');
+    DBHelper.debugRestaurantInfo(name, 'restaurant-setRestaurantFavorite()-name');
+    DBHelper.debugRestaurantInfo(rating, 'restaurant-setRestaurantFavorite()-rating');
 
     const review = {
         id: '',
@@ -351,23 +436,35 @@ function saveNewReview(callback) {
         rating: Number(rating),
         comments: comments,
     };
-    DBHelper.addUpdateReviewById(review, (error, result) => {
-        if (error) return callback(error, null);
-        if (!result) return true;
-        return result;
-    });
 
-    DBHelper.fetchReviewsByRestaurantId(restaurant_id, (error, result) => {
-        return result;
-    });
+    new Promise((resolve, reject) => {
+        DBHelper.addUpdateReviewById(review, (error, result) => {
+            DBHelper.debugRestaurantInfo(error, 'restaurant-setRestaurantFavorite()-addUpdateReviewById()-error');
+            DBHelper.debugRestaurantInfo(result, 'restaurant-setRestaurantFavorite()-addUpdateReviewById()-result');
+            if (error || !result) reject(error);
+            resolve(result);
+        });
+    })
+        .then((result) => {
+            DBHelper.debugRestaurantInfo(result, 'restaurant-setRestaurantFavorite()-result');
+            new Promise((resolve2, reject2) => {
+                DBHelper.fetchReviewsByRestaurantId(restaurant_id, (error, result) => {
+                    DBHelper.debugRestaurantInfo(error, 'restaurant-setRestaurantFavorite()-fetchReviewsByRestaurantId()-error');
+                    DBHelper.debugRestaurantInfo(result, 'restaurant-setRestaurantFavorite()-fetchReviewsByRestaurantId()-result');
+                    resolve2(result);
+                });
+            });
+        });
 
-    return callback(null, true);
+    callback(null, true);
 
 }
 
 // example copied from
 // https://stackoverflow.com/questions/847185/convert-a-unix-timestamp-to-time-in-javascript
 function formattedUnixTime(unix_timestamp) {
+    try {
+
     const date_now = new Date();
     // Create a new JavaScript Date object based on the timestamp
     // multiplied by 1000 so that the argument is in milliseconds, not seconds.
@@ -392,10 +489,15 @@ function formattedUnixTime(unix_timestamp) {
     // Will display time in 10:30:23 format
     return (month + '/' + day + '/' + year + ' ' + (hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2)).toString());
     //return (hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2));
+    }
+    catch (ex) {
+        console.log('Error format: ' + (ex));
+    }
 }
 
 function addReviewModalListener() {
-    if (debug) console.log('restaurant-addReviewModalListener()');
+    DBHelper.debugRestaurantInfo('', 'restaurant-addReviewModalListener()');
+
     // Get the modal
     const modal = document.getElementById('myModal');
 
