@@ -7,17 +7,17 @@ self.importScripts('js/dbhelper.min.js');
 
 debug = false;
 
-if (debug) console.log('start /sw.js');
+//DBHelper.debugObject('', 'start /sw.js');
 
 self.addEventListener('install', function (event) {
-    if (debug) console.log('sw-install()');
+    //DBHelper.debugObject('', 'sw-install()');
 
     // The promise that skipWaiting() returns can be safely ignored.
     self.skipWaiting();
 
     // DBHelper.v1LoadData((error, result) => {
-    //     DBHelper.debugRestaurantInfo(error, 'dbhelper-v1LoadData-error');
-    //     DBHelper.debugRestaurantInfo(result, 'dbhelper-v1LoadData-result');
+    //     //DBHelper.debugObject(error, 'dbhelper-v1LoadData-error');
+    //     //DBHelper.debugObject(result, 'dbhelper-v1LoadData-result');
     // });
 
     event.waitUntil(
@@ -43,23 +43,23 @@ self.addEventListener('install', function (event) {
                 'https://fonts.gstatic.com/s/roboto/v18/KFOlCnqEu92Fr1MmEU9fBBc4.woff2',
             ]);
         }).then(() => {
-            caches.open(DBHelper.contentImgsCache).then(function (cache) {
-                return cache.addAll([
-                    '/img/icons/icon.png',
-                    '/img/icons/icon192.png',
-                    '/img/icons/icon512.png',
-                    '/img/320/1.jpg',
-                    '/img/320/2.jpg',
-                    '/img/320/3.jpg',
-                    '/img/320/4.jpg',
-                    '/img/320/5.jpg',
-                    '/img/320/6.jpg',
-                    '/img/320/7.jpg',
-                    '/img/320/8.jpg',
-                    '/img/320/9.jpg',
-                    '/img/320/10.jpg',
-                ]);
-            });
+            // caches.open(DBHelper.contentImgsCache).then(function (cache) {
+            //     return cache.addAll([
+            //         '/img/icons/icon.png',
+            //         '/img/icons/icon192.png',
+            //         '/img/icons/icon512.png',
+            //         '/img/320/1.jpg',
+            //         '/img/320/2.jpg',
+            //         '/img/320/3.jpg',
+            //         '/img/320/4.jpg',
+            //         '/img/320/5.jpg',
+            //         '/img/320/6.jpg',
+            //         '/img/320/7.jpg',
+            //         '/img/320/8.jpg',
+            //         '/img/320/9.jpg',
+            //         '/img/320/10.jpg',
+            //     ]);
+            // });
         })
             .catch(error => {
                 // Oops!. Got an error from server.
@@ -70,7 +70,7 @@ self.addEventListener('install', function (event) {
 });
 
 self.addEventListener('activate', function (event) {
-    if (debug) console.log('sw-activate()');
+    //DBHelper.debugObject('', 'sw-activate()');
     event.waitUntil(
         cleanCache()
             .catch(error => {
@@ -83,17 +83,13 @@ self.addEventListener('activate', function (event) {
 
 
 self.addEventListener('fetch', function (event) {
-    if (debug) console.log('sw-listener-fetch()');
+    //DBHelper.debugObject('', 'sw-addEventListener()-fetch()');
 
     const requestUrl = new URL(event.request.url);
-    if (debug) console.log('sw-listener-fetch-requestUrl=' + (requestUrl));
-
-    if (debug) console.log('sw-listener-fetch-requestUrl.port=' + (requestUrl.port));
-    if (debug) console.log('sw-listener-fetch-requestUrl.origin=' + (requestUrl.origin));
-    if (debug) console.log('sw-listener-fetch-location.origin=' + (location.origin));
+    //DBHelper.debugObject(requestUrl, 'sw-addEventListener()-fetch-requestUrl');
 
     if (requestUrl.port === '1337') {
-        if (debug) console.log('sw-listener-fetch-return-serveJSON');
+        //DBHelper.debugObject('', 'sw-addEventListener()-fetch-serveJSON()-call');
         const jsonResult = serveJSON(requestUrl);
         if (jsonResult) {
             return jsonResult;
@@ -101,43 +97,42 @@ self.addEventListener('fetch', function (event) {
 
     }
     else if (requestUrl.origin === location.origin) {
-        if (debug) console.log('sw-requestUrl.pathname=' + (requestUrl.pathname));
+        //DBHelper.debugObject(requestUrl.pathname, 'sw-addEventListener()-fetch-requestUrl.pathname');
         if (requestUrl.pathname === '' || requestUrl.pathname === '/') {
-            if (debug) console.log('sw-listener-fetch-respondWith-caches.match');
+            //DBHelper.debugObject('', 'sw-addEventListener()-fetch-respondWith-caches.match()');
             event.respondWith(caches.match('/index.html'));
             return;
         }
         if (requestUrl.pathname.startsWith('img/') || requestUrl.pathname.startsWith('/img/')) {
-            if (debug) console.log('sw-listener-fetch-servePhoto');
+            //DBHelper.debugObject('', 'sw-addEventListener()-fetch-respondWith-servePhoto()');
             event.respondWith(servePhoto(event.request));
             return;
         }
     }
 
-    if (debug) console.log('sw-listener-fetch-respondWith-serveRequest()');
+    //DBHelper.debugObject('', 'sw-addEventListener()-fetch-respondWith-serveRequest()');
     event.respondWith(serveRequest(event.request));
 });
 
 function servePhoto(request) {
-    if (debug) console.log('sw-servePhoto()');
+    //DBHelper.debugObject('', 'sw-servePhoto()');
 
     let storageUrl = request.url.replace(/^(\d+-?)+\d+$\.jpg$/, '');
+    //DBHelper.debugObject(storageUrl, 'sw-servePhoto()-storageUrl');
 
     return caches.open(DBHelper.contentImgsCache).then(function (cache) {
         return cache.match(storageUrl).then(function (response) {
-            if (debug) console.log('sw-cache check if a match');
             if (response) return response;
 
-            if (debug) console.log('sw-fetch request.url=' + (request.url));
             return fetch(request).then(function (networkResponse) {
-                if (debug) console.log('sw-response cache');
                 cache.put(storageUrl, networkResponse.clone());
                 return networkResponse;
             })
                 .catch(error => {
                     // Oops!. Got an error from server.
                     error.message = (`Request failed serve request. Returned status of ${error.message}`);
-                    if (debug) console.log('404 return placeholder.png');
+                    //DBHelper.debugObject(error.message, 'sw-servePhoto()-error.message');
+                    //DBHelper.debugObject('', 'sw-servePhoto()-404 return placeholder.png');
                     return caches.match('/img/static/placeholder.png');
                 });
         });
@@ -150,26 +145,26 @@ function servePhoto(request) {
 }
 
 function serveRequest(request) {
-    if (debug) console.log('sw-serveRequest()');
+    //DBHelper.debugObject('', 'sw-serveRequest()');
 
     let storageUrl = request.url;
+    //DBHelper.debugObject(storageUrl, 'sw-serveRequest()-storageUrl');
 
     return caches.open(staticCacheName).then(function (cache) {
 
         return cache.match(storageUrl).then(function (response) {
-            if (debug) console.log('sw-cache match check');
+            //DBHelper.debugObject('', 'sw-serveRequest()-is cache');
             if (response) return response;
 
-            if (debug) console.log('sw-fetch request.url=' + (request.url));
             return fetch(request).then(function (networkResponse) {
-                if (debug) console.log('response cache');
                 cache.put(storageUrl, networkResponse.clone());
                 return networkResponse;
             })
                 .catch(error => {
                     // Oops!. Got an error from server.
                     error.message = (`Request failed serve request. Returned status of ${error.message}`);
-                    if (debug) console.log('sw-404 return index.html');
+                    //DBHelper.debugObject(error.message, 'sw-servePhoto()-error.message');
+                    //DBHelper.debugObject('', 'sw-serveRequest()-404 return index.html');
                     return caches.match('/404.html');
                 });
         });
@@ -182,7 +177,7 @@ function serveRequest(request) {
 }
 
 function cleanCache() {
-    if (debug) console.log('sw-cleanCache()');
+    //DBHelper.debugObject('', 'sw-cleanCache()');
     return caches.keys().then(function (cacheNames) {
         return Promise.all(
             cacheNames.filter(function (cacheName) {
@@ -201,12 +196,11 @@ function cleanCache() {
 }
 
 function serveJSON(requestUrl) {
-    if (debug) console.log('sw-serveJSON()');
+    //DBHelper.debugObject('', 'sw-serveJSON()');
+    //DBHelper.debugObject(requestUrl, 'sw-serveJSON()-input-requestUrl');
 
-    if (debug) console.log('sw-serveJSON-requestUrl=' + requestUrl);
     return fetch(requestUrl, {headers: {'Content-Type': 'application/json'}})
         .then(function (networkResponse) {
-            if (debug) console.log('sw-serveJSON-networkResponse');
             return networkResponse;
         })
         .then(response => response.json())

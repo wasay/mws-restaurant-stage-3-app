@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#fdfdfd">
 
     <meta name="description" content="Restaurant Reviews for best cuisines in your Neighborhoods">
     <!-- Normalize.css for better cross-browser consistency -->
     <link async rel="stylesheet" src="//normalize-css.googlecode.com/svn/trunk/normalize.css"/>
     <!-- Main CSS file -->
-    <link async rel="stylesheet" href="css/main.min.css?v=20180924-1733">
+    <link async rel="stylesheet" href="css/main.min.css?v=20181001-1239">
     <link rel="icon" href="img/icons/icon.png">
-    <link rel="manifest" href="/manifest.json?v=20180924-1733">
+    <link rel="manifest" href="/manifest.json?v=20181001-1239">
     <title>Restaurant Reviews</title>
 </head>
 
@@ -29,11 +29,11 @@
                 <div class="filter-selects">
                     <h2>Filter Results</h2>
                     <select id="neighborhoods-select" aria-label="All Neighborhoods" name="neighborhoods"
-                            onchange="updateRestaurants()">
+                            onchange="updateRestaurants();">
                         <option value="all">All Neighborhoods</option>
                     </select>
                     <select id="cuisines-select" aria-label="All Cuisines" name="cuisines"
-                            onchange="updateRestaurants()">
+                            onchange="updateRestaurants();">
                         <option value="all">All Cuisines</option>
                     </select>
                 </div>
@@ -57,15 +57,15 @@
     <!-- Beginning scripts -->
     <!-- idb library -->
     <script type="application/javascript" charset="utf-8" src="js/idb.js"></script>
-    <!-- library - fontawesome -->
-    <script type="application/javascript" charset="utf-8" src="js/regular.js"></script>
-    <script type="application/javascript" charset="utf-8" src="js/fontawesome.js"></script>
     <!-- service worker and shared scripts -->
-    <script type="application/javascript" charset="utf-8" src="js/main.min.js?v=20180924-1733"></script>
+    <script type="application/javascript" charset="utf-8" src="js/main.min.js?v=20181001-1239"></script>
     <!-- Database helpers -->
-    <script type="application/javascript" charset="utf-8" src="js/dbhelper.min.js?v=20180924-1733"></script>
+    <script type="application/javascript" charset="utf-8" src="js/dbhelper.min.js?v=20181001-1239"></script>
     <!-- Main javascript file -->
-    <script type="application/javascript" charset="utf-8" src="js/index.min.js?v=20180924-1733"></script>
+    <script type="application/javascript" charset="utf-8" src="js/index.min.js?v=20181001-1239"></script>
+    <!-- library - fontawesome -->
+    <script async defer type="application/javascript" charset="utf-8" src="js/regular.js"></script>
+    <script async defer type="application/javascript" charset="utf-8" src="js/fontawesome.js"></script>
     <!-- Google Maps -->
     <script async defer
             src="https://maps.googleapis.com/maps/api/js?key={API_KEY}&libraries=places&callback=initMap"></script>

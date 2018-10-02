@@ -23,7 +23,7 @@ const htmlmin = require('gulp-htmlmin');
 const config = {
     //assetsDir: 'app/Resources/assets',
     //sassPattern: 'sass/**/*.scss',
-    production: !!util.env.production
+    production: true
 };
 
 //https://andy-carter.com/blog/a-beginners-guide-to-the-task-runner-gulp

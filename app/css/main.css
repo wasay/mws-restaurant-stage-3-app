@@ -63,6 +63,7 @@ article, aside, canvas, details, figcaption, figure, footer, header, hgroup, men
     letter-spacing: 1px;
     text-align: center;
     text-transform: uppercase;
+    width:100%;
 }
 
 #footer a {
@@ -416,7 +417,7 @@ nav h1 a {
     }
 
     #restaurants-list li {
-        max-width: 210px;
+        max-width: 215px;
         display: inline-table;
     }
 
