@@ -339,7 +339,7 @@ addMarkersToMap = (restaurants = self.restaurants) => {
     //DBHelper.debugObject('', 'index-addMarkersToMap()');
     //DBHelper.debugObject(restaurants, 'index-addMarkersToMap()-restaurants');
 
-    console.log('is_map_to_be_loaded=' + (is_map_to_be_loaded));
+    //console.log('is_map_to_be_loaded=' + (is_map_to_be_loaded));
     if (!is_map_to_be_loaded) {
 
         const map = document.getElementById('map');
