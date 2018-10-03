@@ -15,24 +15,24 @@ let is_append_properties = !navigator.onLine;
  * document content load
  */
 document.addEventListener('DOMContentLoaded', (event) => {
-    DBHelper.debugObject('', 'index-DOMContentLoaded()');
+    //DBHelper.debugObject('', 'index-DOMContentLoaded()');
 
 
     lazyLoadImages();
 
     new Promise((resolve, reject) => {
-        DBHelper.debugObject('', 'index-DOMContentLoaded()-1-v1LoadData()-call');
+        //DBHelper.debugObject('', 'index-DOMContentLoaded()-1-v1LoadData()-call');
         const load_all_restaurants = true;
-        DBHelper.debugObject(load_all_restaurants, 'index-DOMContentLoaded()-load_all_restaurants');
+        //DBHelper.debugObject(load_all_restaurants, 'index-DOMContentLoaded()-load_all_restaurants');
         DBHelper.v1LoadData(load_all_restaurants, (error, result) => {
-            DBHelper.debugObject(error, 'index-DOMContentLoaded()-v1LoadData-error');
-            DBHelper.debugObject(result, 'index-DOMContentLoaded()-v1LoadData-result');
+            //DBHelper.debugObject(error, 'index-DOMContentLoaded()-v1LoadData-error');
+            //DBHelper.debugObject(result, 'index-DOMContentLoaded()-v1LoadData-result');
             if (error || !result) resolve(false);
             resolve(result);
         });
     })
         .then((restaurants) => {
-            DBHelper.debugObject(restaurants, 'index-DOMContentLoaded()-2-1-restaurants');
+            //DBHelper.debugObject(restaurants, 'index-DOMContentLoaded()-2-1-restaurants');
 
             return new Promise((resolve2, reject2) => {
                 //DBHelper.debugObject('', 'index-DOMContentLoaded()-2-2-processPendingRequests()-call');
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             });
         })
         .then((restaurants) => {
-            DBHelper.debugObject(restaurants, 'index-DOMContentLoaded()-3-1-restaurants');
+            //DBHelper.debugObject(restaurants, 'index-DOMContentLoaded()-3-1-restaurants');
 
             return new Promise((resolve3, reject3) => {
                 //DBHelper.debugObject('', 'index-DOMContentLoaded()-3-2-fetchNeighborhoods()-call');
@@ -351,10 +351,10 @@ addMarkersToMap = (restaurants = self.restaurants) => {
     //DBHelper.debugObject('', 'index-addMarkersToMap()');
     //DBHelper.debugObject(restaurants, 'index-addMarkersToMap()-restaurants');
 
-    DBHelper.debugObject(navigator.onLine, 'index-addMarkersToMap()-navigator.onLine');
+    //DBHelper.debugObject(navigator.onLine, 'index-addMarkersToMap()-navigator.onLine');
     if ( ! navigator.onLine) return;
 
-    DBHelper.debugObject(is_map_to_be_loaded, 'index-addMarkersToMap()-is_map_to_be_loaded');
+    //DBHelper.debugObject(is_map_to_be_loaded, 'index-addMarkersToMap()-is_map_to_be_loaded');
     if ( !is_map_to_be_loaded) {
 
         const map = document.getElementById('map');
@@ -372,9 +372,9 @@ addMarkersToMap = (restaurants = self.restaurants) => {
         is_map_to_be_loaded = true;
         return;
     }
-    DBHelper.debugObject(is_map_to_be_loaded, 'index-addMarkersToMap()-is_map_to_be_loaded');
+    //DBHelper.debugObject(is_map_to_be_loaded, 'index-addMarkersToMap()-is_map_to_be_loaded');
 
-    DBHelper.debugObject(restaurants, 'index-addMarkersToMap()-restaurants');
+    //DBHelper.debugObject(restaurants, 'index-addMarkersToMap()-restaurants');
     if (restaurants) {
         const map_bounds = new google.maps.LatLngBounds();
         new Promise((resolve, reject) => {

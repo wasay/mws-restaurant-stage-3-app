@@ -7,10 +7,10 @@ self.importScripts('js/dbhelper.min.js');
 
 debug = true;
 
-DBHelper.debugObject('', 'start /sw.js');
+//DBHelper.debugObject('', 'start /sw.js');
 
 self.addEventListener('install', function (event) {
-    DBHelper.debugObject('', 'sw-install()');
+    //DBHelper.debugObject('', 'sw-install()');
 
     // The promise that skipWaiting() returns can be safely ignored.
     self.skipWaiting();
@@ -22,7 +22,7 @@ self.addEventListener('install', function (event) {
 
     event.waitUntil(
         caches.open(DBHelper.staticCacheName).then(function (cache) {
-            DBHelper.debugObject('', 'sw-addEventListener()-install-1-staticCacheName.cache');
+            //DBHelper.debugObject('', 'sw-addEventListener()-install-1-staticCacheName.cache');
             return cache.addAll([
                 '/css/main.min.css',
                 '/js/regular.js',
@@ -43,9 +43,9 @@ self.addEventListener('install', function (event) {
                 'https://fonts.gstatic.com/s/roboto/v18/KFOlCnqEu92Fr1MmEU9fBBc4.woff2',
             ]);
         }).then((result) => {
-            DBHelper.debugObject(result, 'sw-addEventListener()-install-2-result');
+            //DBHelper.debugObject(result, 'sw-addEventListener()-install-2-result');
             caches.open(DBHelper.contentImgsCache).then(function (cache) {
-                DBHelper.debugObject('', 'sw-addEventListener()-install-2-contentImgsCache.cache');
+                //DBHelper.debugObject('', 'sw-addEventListener()-install-2-contentImgsCache.cache');
                 return cache.addAll([
                     '/img/icons/icon.png',
                     '/img/icons/icon192.png',
@@ -63,7 +63,7 @@ self.addEventListener('install', function (event) {
                     '/img/placeholder.png',
                 ]);
             }).then((result) => {
-                DBHelper.debugObject(result, 'sw-addEventListener()-install-3-result');
+                //DBHelper.debugObject(result, 'sw-addEventListener()-install-3-result');
                 return true;
             });
         })
@@ -76,7 +76,7 @@ self.addEventListener('install', function (event) {
 });
 
 self.addEventListener('activate', function (event) {
-    DBHelper.debugObject('', 'sw-activate()');
+    //DBHelper.debugObject('', 'sw-activate()');
     event.waitUntil(
         cleanCache()
             .catch(error => {
@@ -89,18 +89,18 @@ self.addEventListener('activate', function (event) {
 
 
 self.addEventListener('fetch', function (event) {
-    DBHelper.debugObject('', 'sw-addEventListener()-fetch()');
+    //DBHelper.debugObject('', 'sw-addEventListener()-fetch()');
 
 
     const requestUrl = new URL(event.request.url);
 
-    DBHelper.debugObject(requestUrl.url, 'sw-addEventListener()-fetch-requestUrl.url');
-    DBHelper.debugObject(requestUrl.port, 'sw-addEventListener()-fetch-requestUrl.port');
-    DBHelper.debugObject(requestUrl.pathname, 'sw-addEventListener()-fetch-requestUrl.pathname');
-    DBHelper.debugObject((requestUrl.pathname.indexOf('img/') > 0), 'sw-addEventListener()-fetch-requestUrl.pathname.indexOf(img/) > 0');
+    //DBHelper.debugObject(requestUrl.url, 'sw-addEventListener()-fetch-requestUrl.url');
+    //DBHelper.debugObject(requestUrl.port, 'sw-addEventListener()-fetch-requestUrl.port');
+    //DBHelper.debugObject(requestUrl.pathname, 'sw-addEventListener()-fetch-requestUrl.pathname');
+    //DBHelper.debugObject((requestUrl.pathname.indexOf('img/') > 0), 'sw-addEventListener()-fetch-requestUrl.pathname.indexOf(img/) > 0');
 
     if (requestUrl.port === '1337') {
-        DBHelper.debugObject('', 'sw-addEventListener()-fetch-serveJSON()-call');
+        //DBHelper.debugObject('', 'sw-addEventListener()-fetch-serveJSON()-call');
         const jsonResult = serveJSON(requestUrl);
         if (jsonResult) {
             return jsonResult;
@@ -111,32 +111,32 @@ self.addEventListener('fetch', function (event) {
         if (requestUrl.pathname === '' || requestUrl.pathname === '/') {
 
             const cacheResponse = caches.match('/index.html');
-            DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-addEventListener()-cacheResponse');
+            //DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-addEventListener()-cacheResponse');
 
             event.respondWith(caches.match('/index.html')
                 .catch(error => {
                     // Oops!. Got an error from server.
                     error.message = (`Request failed serve request. Returned status of ${error.message} - sw-addEventListener()-fetch`);
-                    DBHelper.debugObject(error.message, 'sw-addEventListener()-fetch-error.message');
-                    DBHelper.debugObject('', 'sw-addEventListener()-fetch-404.html');
+                    //DBHelper.debugObject(error.message, 'sw-addEventListener()-fetch-error.message');
+                    //DBHelper.debugObject('', 'sw-addEventListener()-fetch-404.html');
                     return caches.match('/404.html');
                 }));
             return;
         }
 
         if (requestUrl.pathname.indexOf('img/') > 0) {
-            DBHelper.debugObject('', 'sw-addEventListener()-fetch-respondWith-servePhoto()-call');
+            //DBHelper.debugObject('', 'sw-addEventListener()-fetch-respondWith-servePhoto()-call');
             event.respondWith(servePhoto(event.request));
             return;
         }
     }
 
-    DBHelper.debugObject('', 'sw-addEventListener()-fetch-respondWith-serveRequest()-call');
+    //DBHelper.debugObject('', 'sw-addEventListener()-fetch-respondWith-serveRequest()-call');
     event.respondWith(serveRequest(event.request));
 });
 
 function servePhoto(request) {
-    DBHelper.debugObject('', 'sw-servePhoto()');
+    //DBHelper.debugObject('', 'sw-servePhoto()');
 
     let storageUrl = request.url.replace(/^(\d+-?)+\d+$\.jpg$/, '');
     //DBHelper.debugObject(storageUrl, 'sw-servePhoto()-storageUrl');
@@ -144,7 +144,7 @@ function servePhoto(request) {
     return caches.open(DBHelper.contentImgsCache).then(function (cache) {
 
         const cacheResponse = cache.match(storageUrl);
-        DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-servePhoto()-cacheResponse');
+        //DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-servePhoto()-cacheResponse');
 
         return cache.match(storageUrl).then(function (response) {
             if (response) return response;
@@ -175,15 +175,15 @@ function servePhoto(request) {
 }
 
 function serveRequest(request) {
-    DBHelper.debugObject('', 'sw-serveRequest()');
+    //DBHelper.debugObject('', 'sw-serveRequest()');
 
     let storageUrl = request.url;
-    DBHelper.debugObject(storageUrl, 'sw-serveRequest()-storageUrl');
+    //DBHelper.debugObject(storageUrl, 'sw-serveRequest()-storageUrl');
 
     return caches.open(staticCacheName).then(function (cache) {
 
         const cacheResponse = cache.match(storageUrl);
-        DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-serveRequest()-cacheResponse');
+        //DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-serveRequest()-cacheResponse');
 
         return cacheResponse.then(function (response) {
             if (response) return response;
@@ -204,24 +204,24 @@ function serveRequest(request) {
         .catch(error => {
             // Oops!. Got an error from server.
             error.message = (`Request failed. Returned status of ${error.message} - sw-serveRequest()-catch`);
-            DBHelper.debugObject(error, 'sw-serveRequest()-catch');
+            //DBHelper.debugObject(error, 'sw-serveRequest()-catch');
             throw error;
         });
 }
 
 function serveJSON(requestUrl) {
-    DBHelper.debugObject('', 'sw-serveJSON()');
+    //DBHelper.debugObject('', 'sw-serveJSON()');
     //DBHelper.debugObject(requestUrl, 'sw-serveJSON()-input-requestUrl');
 
-    DBHelper.debugObject(navigator.onLine, 'sw-serveJSON()-1-navigator.onLine');
+    //DBHelper.debugObject(navigator.onLine, 'sw-serveJSON()-1-navigator.onLine');
 
     if (!navigator.onLine) {
         const id = getParameterByName('id', requestUrl.url);
-        DBHelper.debugObject(id, 'sw-serveJSON()-1-id');
+        //DBHelper.debugObject(id, 'sw-serveJSON()-1-id');
 
         return new Promise((resolve, reject) => {
             if (id) {
-                DBHelper.debugObject('', 'sw-serveJSON()-2-getRestaurantById()-call');
+                //DBHelper.debugObject('', 'sw-serveJSON()-2-getRestaurantById()-call');
                 DBHelper.getRestaurantById(id, (error, result) => {
                     if (error) reject(error);
 
@@ -235,7 +235,7 @@ function serveJSON(requestUrl) {
             else if (id) return false;
 
             return new Promise((resolve2, reject2) => {
-                DBHelper.debugObject('', 'sw-serveJSON()-3-getAllRestaurants()-call');
+                //DBHelper.debugObject('', 'sw-serveJSON()-3-getAllRestaurants()-call');
                 const is_append_properties = !navigator.onLine;
                 DBHelper.getAllRestaurants(is_append_properties, (error, result) => {
                     if (error) reject2(error);
@@ -262,7 +262,7 @@ function serveJSON(requestUrl) {
             });
     }
 
-    DBHelper.debugObject('', 'sw-serveJSON()-2-fetch');
+    //DBHelper.debugObject('', 'sw-serveJSON()-2-fetch');
     return fetch(requestUrl, {headers: {'Content-Type': 'application/json'}})
         .then(function (networkResponse) {
             return networkResponse;

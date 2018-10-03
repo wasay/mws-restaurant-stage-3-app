@@ -318,7 +318,7 @@ class DBHelper {
             //DBHelper.debugObject('', 'dbhelper-fetchCuisines-getAllRestaurants()-call');
             DBHelper
                 .getAllRestaurants(is_append_properties, (error, result) => {
-                    DBHelper.debugObject(error, 'dbhelper-fetchCuisines()-2-getAllRestaurants()-error');
+                    //DBHelper.debugObject(error, 'dbhelper-fetchCuisines()-2-getAllRestaurants()-error');
                     //DBHelper.debugObject(result, 'dbhelper-fetchCuisines()-2-getAllRestaurants()-result');
                     if (error || !result) reject(false);
                     resolve(result); // resolve to restaurant object with valid restaurant.id value
@@ -889,7 +889,7 @@ class DBHelper {
 
                     DBHelper
                         .getAllIndexDbRestaurants((error, result) => {
-                            DBHelper.debugObject(error, 'dbhelper-getAllRestaurants()-2-3-getAllIndexDbRestaurants()-error');
+                            //DBHelper.debugObject(error, 'dbhelper-getAllRestaurants()-2-3-getAllIndexDbRestaurants()-error');
                             //DBHelper.debugObject(result, 'dbhelper-getAllRestaurants()-2-3-getAllIndexDbRestaurants()-result');
                             if (error || !result) resolve2(false);
                             resolve2(result);
@@ -1489,42 +1489,42 @@ class DBHelper {
      * update a review by its ID.
      */
     static addUpdateReviewById(review, callback) {
-        DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()');
-        DBHelper.debugObject(review, 'dbhelper-addUpdateReviewById()-review');
+        //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()');
+        //DBHelper.debugObject(review, 'dbhelper-addUpdateReviewById()-review');
 
         new Promise((resolve, reject) => {
             resolve(true);
         })
             .then((result) => {
-                DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
                 return new Promise((resolve2, reject2) => {
-                    DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-call');
+                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-call');
                     DBHelper.addUpdateLocalAndCacheReviewById(review, (error, result) => {
-                        DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-error');
-                        DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-result');
+                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-error');
+                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-result');
                         if (error) reject2(error);
                         resolve2(result);
                     });
                 })
             })
             .then((result) => {
-                DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
                 return new Promise((resolve3, reject3) => {
-                    DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-call');
+                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-call');
                     DBHelper.addUpdateRemoteReviewById(review, (error, result) => {
-                        DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-error');
-                        DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-result');
+                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-error');
+                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-result');
                         if (error) reject3(error);
                         resolve3(result);
                     });
                 })
             })
             .then((result) => {
-                DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
                 return new Promise((resolve4, reject4) => {
                     DBHelper.fetchReviewsByRestaurantId(review.restaurant_id, (error, result) => {
-                        DBHelper.debugObject(error, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-error');
-                        DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-result');
+                        //DBHelper.debugObject(error, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-error');
+                        //DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-result');
                         if (error) reject4(error);
                         resolve4(result);
                     });
@@ -1967,8 +1967,8 @@ class DBHelper {
     }
 
     static processPendingRequests(callback) {
-        DBHelper.debugObject('', 'shared-processPendingRequests()');
-        DBHelper.debugObject(navigator.onLine, 'shared-processPendingRequests()-navigator.onLine');
+        //DBHelper.debugObject('', 'shared-processPendingRequests()');
+        //DBHelper.debugObject(navigator.onLine, 'shared-processPendingRequests()-navigator.onLine');
 
         if (!navigator.onLine) callback('Still not online', null);
 
@@ -1983,13 +1983,13 @@ class DBHelper {
                     if (!pendingRequests) return;
 
                     pendingRequests.map(pending => {
-                        DBHelper.debugObject(pending, 'shared-processPendingRequests()-pending');
+                        //DBHelper.debugObject(pending, 'shared-processPendingRequests()-pending');
                         return fetch(pending.url, {
                             method: pending.method, body: pending.body, headers: pending.headers
                         })
                             .then(networkResponse => networkResponse.json())
                             .then((networkResponse) => {
-                                DBHelper.debugObject(networkResponse, 'shared-processPendingRequests()-networkResponse');
+                                //DBHelper.debugObject(networkResponse, 'shared-processPendingRequests()-networkResponse');
                                 if (networkResponse) {
                                     pendingDeleteIds.push(pending.id);
                                 }

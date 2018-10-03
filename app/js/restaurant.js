@@ -1,6 +1,6 @@
 // js/restaurant.js
 
-DBHelper.debugObject('', 'restaurant-start /js/restaurant.js');
+//DBHelper.debugObject('', 'restaurant-start /js/restaurant.js');
 
 let restaurant;
 let reviews;
@@ -12,23 +12,23 @@ let map;
  * document content load
  */
 document.addEventListener('DOMContentLoaded', (event) => {
-    DBHelper.debugObject('', 'restaurant-DOMContentLoaded()');
+    //DBHelper.debugObject('', 'restaurant-DOMContentLoaded()');
 
     lazyLoadImages();
 
     new Promise((resolve, reject) => {
-        DBHelper.debugObject('', 'restaurant-DOMContentLoaded()-1-v1LoadData()-call');
+        //DBHelper.debugObject('', 'restaurant-DOMContentLoaded()-1-v1LoadData()-call');
         const load_all_restaurants = false;
-        DBHelper.debugObject(load_all_restaurants, 'index-DOMContentLoaded()-load_all_restaurants');
+        //DBHelper.debugObject(load_all_restaurants, 'index-DOMContentLoaded()-load_all_restaurants');
         DBHelper.v1LoadData(load_all_restaurants, (error, result) => {
-            DBHelper.debugObject(error, 'restaurant-DOMContentLoaded()-v1LoadData-error');
-            DBHelper.debugObject(result, 'restaurant-DOMContentLoaded()-v1LoadData-result');
+            //DBHelper.debugObject(error, 'restaurant-DOMContentLoaded()-v1LoadData-error');
+            //DBHelper.debugObject(result, 'restaurant-DOMContentLoaded()-v1LoadData-result');
             if (error || !result) resolve(false);
             resolve(result);
         });
     })
         .then((restaurants) => {
-            DBHelper.debugObject(restaurants, 'restaurant-DOMContentLoaded()-2-1-restaurants');
+            //DBHelper.debugObject(restaurants, 'restaurant-DOMContentLoaded()-2-1-restaurants');
 
             return new Promise((resolve2, reject2) => {
                 //DBHelper.debugObject('', 'restaurant-DOMContentLoaded()-2-2-processPendingRequests()-call');
@@ -86,7 +86,7 @@ window.initMap = () => {
  * Get current restaurant from page URL.
  */
 getRestaurantFromURL = (callback) => {
-    DBHelper.debugObject('', 'restaurant-getRestaurantFromURL()');
+    //DBHelper.debugObject('', 'restaurant-getRestaurantFromURL()');
 
     if (self.restaurant) { // restaurant already fetched!
         callback(null, self.restaurant);
@@ -102,16 +102,16 @@ getRestaurantFromURL = (callback) => {
     }
     else {
         new Promise((resolve, reject) => {
-            DBHelper.debugObject('', 'restaurant-getRestaurantFromURL()-getRestaurantById() - call');
+            //DBHelper.debugObject('', 'restaurant-getRestaurantFromURL()-getRestaurantById() - call');
             DBHelper.getRestaurantById(id, (error, result) => {
-                DBHelper.debugObject(error, 'restaurant-getRestaurantFromURL()-getRestaurantById()-error');
-                DBHelper.debugObject(result, 'restaurant-getRestaurantFromURL()-getRestaurantById()-result');
+                //DBHelper.debugObject(error, 'restaurant-getRestaurantFromURL()-getRestaurantById()-error');
+                //DBHelper.debugObject(result, 'restaurant-getRestaurantFromURL()-getRestaurantById()-result');
                 if (error) reject(false);
                 resolve(result);
             });
         })
             .then((restaurant) => {
-                DBHelper.debugObject(restaurant, 'restaurant-getRestaurantFromURL()-restaurant');
+                //DBHelper.debugObject(restaurant, 'restaurant-getRestaurantFromURL()-restaurant');
                 if (!restaurant) {
                     return;
                 }
@@ -120,7 +120,7 @@ getRestaurantFromURL = (callback) => {
                 self.restaurant.reviews = restaurant.reviews;
                 self.restaurant.operating_hours = restaurant.operating_hours;
 
-                DBHelper.debugObject('', 'restaurant-getRestaurantFromURL()-fillRestaurantHTML() - call');
+                //DBHelper.debugObject('', 'restaurant-getRestaurantFromURL()-fillRestaurantHTML() - call');
                 fillRestaurantHTML();
                 callback(null, restaurant);
             })
