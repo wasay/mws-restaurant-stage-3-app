@@ -1,8 +1,9 @@
 # Steps to run the project
 1. Command/Terminal window
-2. (if gulp run is needed? gulp --production OR gulp OR gulp watch)
-3. cd into public folder `cd public`
-4. Run local server `python -m SimpleHTTPServer 8000`
+2. Updated Google Maps API key
+2. run `gulp` in Terminal window
+3. run `cd public`
+4. run `python -m SimpleHTTPServer 8000`
 5. Browser the website at `http://localhost:8000`
 
 # Steps to run api project
