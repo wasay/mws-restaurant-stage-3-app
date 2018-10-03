@@ -1,4 +1,3 @@
-
 lazyLoadImages = () => {
     //DBHelper.debugObject('', 'index-lazyLoadImages()');
 

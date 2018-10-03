@@ -318,7 +318,7 @@ class DBHelper {
             //DBHelper.debugObject('', 'dbhelper-fetchCuisines-getAllRestaurants()-call');
             DBHelper
                 .getAllRestaurants(is_append_properties, (error, result) => {
-                    //DBHelper.debugObject(error, 'dbhelper-fetchCuisines()-2-getAllRestaurants()-error');
+                    DBHelper.debugObject(error, 'dbhelper-fetchCuisines()-2-getAllRestaurants()-error');
                     //DBHelper.debugObject(result, 'dbhelper-fetchCuisines()-2-getAllRestaurants()-result');
                     if (error || !result) reject(false);
                     resolve(result); // resolve to restaurant object with valid restaurant.id value
@@ -354,7 +354,7 @@ class DBHelper {
     static urlForRestaurant(restaurant) {
         //DBHelper.debugObject('', 'dbhelper-urlForRestaurant()');
         //DBHelper.debugObject(restaurant, 'dbhelper-urlForRestaurant()-restaurant');
-        return (`./restaurant.html?id=${restaurant.id}`);
+        return (`./restaurant.html?id=${restaurant.id ? restaurant.id : restaurant.restaurant_id}`);
     }
 
     /**
@@ -425,10 +425,10 @@ class DBHelper {
             .then(db => {
                 const txRestaurants = db.transaction('restaurants', 'readonly');
                 const restaurantsStore = txRestaurants.objectStore('restaurants');
-                return restaurantsStore.getKey(1);
+                return restaurantsStore.getAllKeys();
             })
-            .then((restaurant) => {
-                return (typeof restaurant !== 'undefined' && restaurant) ? callback(null, true) : callback(null, false);
+            .then((restaurants) => {
+                return (typeof restaurants !== 'undefined' && restaurants && restaurants.length && restaurants.length > 0) ? callback(null, true) : callback(null, false);
             })
             .catch(error => {
                 // Oops!. Got an error from server.
@@ -449,39 +449,43 @@ class DBHelper {
             .then((db) => {
                 const txRestaurants = db.transaction('restaurants', 'readonly');
                 const restaurantsStore = txRestaurants.objectStore('restaurants');
-                const restaurantsObj = restaurantsStore.getAllKeys();
-                //DBHelper.debugObject(restaurantsObj, 'dbhelper-getAllRestaurants()-1-1-restaurantsObj');
+                return restaurantsStore.getAll()
+                    .then((restaurantsObj) => {
 
-                if (typeof restaurantsObj.map !== 'function') return false;
+                        //DBHelper.debugObject(restaurantsObj, 'dbhelper-getAllRestaurants()-1-1-restaurantsObj');
 
-                let restaurants;
-                restaurants = restaurantsObj.map((restaurant) => {
-                    //DBHelper.debugObject(restaurant, 'dbhelper-getAllIndexDbRestaurants()-1-2-restaurant');
-                    return new Promise((resolve, reject) => {
-                        DBHelper.getIndexDbRestaurantById(restaurant.restaurant_id, (error, result) => {
-                            //DBHelper.debugObject(error, 'dbhelper-getAllIndexDbRestaurants()-1-3-getIndexDbRestaurantById()-error');
-                            //DBHelper.debugObject(result, 'dbhelper-getAllIndexDbRestaurants()-1-3-getIndexDbRestaurantById()-result');
-                            if (error || !result) reject(false);
-                            resolve(result);
-                        });
-                    })
-                        .then(restaurant, (result) => {
-                            //DBHelper.debugObject(result, 'dbhelper-getAllIndexDbRestaurants()-1-4-result');
-                            //DBHelper.debugObject(restaurant, 'dbhelper-getAllIndexDbRestaurants()-1-4-restaurant');
-                            if (result) return result;
-                            else return restaurant;
+                        if (typeof restaurantsObj.map !== 'function') return false;
+
+                        let restaurants = restaurantsObj;
+
+                        return new Promise((resolve, reject) => {
+                            restaurants.map((restaurant) => {
+                                //DBHelper.debugObject(restaurant.restaurant_id, 'dbhelper-getAllIndexDbRestaurants()-1-2-restaurant_id');
+                                return new Promise((resolve2, reject2) => {
+                                    DBHelper.getIndexDbRestaurantById(restaurant.restaurant_id, (error, result) => {
+                                        //DBHelper.debugObject(error, 'dbhelper-getAllIndexDbRestaurants()-1-3-getIndexDbRestaurantById()-error');
+                                        //DBHelper.debugObject(result, 'dbhelper-getAllIndexDbRestaurants()-1-3-getIndexDbRestaurantById()-result');
+                                        if (error || !result) reject(false);
+                                        resolve2(result);
+                                    });
+                                })
+                            });
+
+                            resolve(restaurants);
                         })
-                        .catch(error => {
-                            // Oops!. Got an error from server.
-                            error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getAllIndexDbRestaurants()-catch`);
-                            console.log(error.message);
-                            callback(error, null);
-                        });
-                });
-                //DBHelper.debugObject(restaurants, 'dbhelper-getAllIndexDbRestaurants()-1-4-restaurants');
-                return restaurants;
+                            .then((result) => {
+                                //DBHelper.debugObject(result, 'dbhelper-getAllIndexDbRestaurants()-1-4-result');
+                                return result;
+                            })
+                            .catch(error => {
+                                // Oops!. Got an error from server.
+                                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getAllIndexDbRestaurants()-catch`);
+                                return error;
+                            });
+                    });
             })
             .then((restaurants) => {
+                //DBHelper.debugObject(restaurants, 'dbhelper-getAllIndexDbRestaurants()-2-1-restaurants');
                 if (restaurants) {
                     callback(null, restaurants)
                 }
@@ -503,7 +507,7 @@ class DBHelper {
      */
     static getIndexDbRestaurantById(restaurant_id, callback) {
         //DBHelper.debugObject('', 'dbhelper-getIndexDbRestaurantById()');
-        //DBHelper.debugObject(restaurant_id, 'dbhelper-getIndexDbRestaurantById()-restaurant_id');
+        //DBHelper.debugObject(restaurant_id, 'dbhelper-getIndexDbRestaurantById()-input-restaurant_id');
 
         if (!restaurant_id) {
             const error_message = (`Missing restaurant id - dbhelper-getIndexDbRestaurantById()`);
@@ -525,13 +529,14 @@ class DBHelper {
                     });
             })
             .then((restaurantRow) => {
-                //DBHelper.debugObject(restaurantRow, 'dbhelper-getIndexDbRestaurantById()-2-restaurantRow');
+                //DBHelper.debugObject(restaurantRow, 'dbhelper-getIndexDbRestaurantById()-2-1-restaurantRow');
                 if (!restaurantRow) {
-                    const error_message = (`No restaurant info found in idb - dbhelper-getIndexDbRestaurantById()-second`);
+                    const error_message = (`No restaurant info found in idb - dbhelper-getIndexDbRestaurantById()-2`);
                     callback(error_message, null);
                     return;
                 }
-                //DBHelper.debugObject(restaurantRow, 'dbhelper-getIndexDbRestaurantById()-1-2-restaurantRow');
+                //DBHelper.debugObject(restaurantRow, 'dbhelper-getIndexDbRestaurantById()-2-2-restaurantRow');
+                //DBHelper.debugObject(restaurantRow.restaurant_id, 'dbhelper-getIndexDbRestaurantById()-2-2-restaurantRow.restaurant_id');
 
                 // set default properites
                 let restaurant = {};
@@ -547,15 +552,15 @@ class DBHelper {
                 restaurant.createdAt = restaurantRow.createdAt;
                 restaurant.updatedAt = restaurantRow.updatedAt;
 
-                //DBHelper.debugObject(restaurant, 'dbhelper-getIndexDbRestaurantById()-1-2-restaurant');
+                //DBHelper.debugObject(restaurant, 'dbhelper-getIndexDbRestaurantById()-2-3-restaurant');
 
                 return restaurant;
             })
             .then((restaurant) => {
-                //DBHelper.debugObject(restaurant, 'dbhelper-getIndexDbRestaurantById()-3-restaurant');
+                //DBHelper.debugObject(restaurant, 'dbhelper-getIndexDbRestaurantById()-3-1-restaurant');
 
                 if (!restaurant) {
-                    const error_message = (`No restaurant info found in idb - dbhelper-getIndexDbRestaurantById()-fifth`);
+                    const error_message = (`No restaurant info found in idb - dbhelper-getIndexDbRestaurantById()-3`);
                     callback(error_message, null);
                     return;
                 }
@@ -567,7 +572,7 @@ class DBHelper {
                 // Oops!. Got an error from server.
                 error.message = (`Request failed. Returned status of ${error.message} - dbhelper-getIndexDbRestaurantById()-catch`);
                 console.log(error.message);
-                callback(error, null);
+                callback(error.message, null);
                 return;
             });
     }
@@ -767,35 +772,37 @@ class DBHelper {
         })
             .catch(error => {
 
-                if (!navigator.onLine) {
-
-                    return dbPromise.then(function (db) {
-
-                        const txPending = db.transaction('pending', 'readwrite');
-                        let pendingStore = txPending.objectStore('pending');
-
-                        const pending = {
-                            id: Date.now(),
-                            url: requestURL,
-                            method: requestMethod,
-                            body: requestBody,
-                            headers: requestHeaders
-                        };
-                        //DBHelper.debugObject(pending, 'dbhelper-addUpdateRemoteRestaurantById()-1-pending');
-
-                        pendingStore.put(pending);
-                        txPending.complete;
-                        return true;
-                    }).then(result => {
-                        callback(null, result);
-                    });
-                }
-                else {
-
+                if (navigator.onLine)
+                {
                     // Oops!. Got an error from server.
-                    error.message = (`Request failed. Returned status of ${error.message}`);
+                    error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteRestaurantById()`);
                     callback(error, null);
                 }
+
+                return dbPromise.then(function (db) {
+
+                    const txPending = db.transaction('pending', 'readwrite');
+                    let pendingStore = txPending.objectStore('pending');
+
+                    const pending = {
+                        id: Date.now(),
+                        url: requestURL,
+                        method: requestMethod,
+                        body: requestBody,
+                        headers: requestHeaders
+                    };
+                    //DBHelper.debugObject(pending, 'dbhelper-addUpdateRemoteRestaurantById()-1-pending');
+
+                    pendingStore.put(pending);
+                    txPending.complete;
+                    return true;
+                }).then(result => {
+                    callback(null, result);
+                })
+                .catch(error => {
+                    error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteRestaurantById()-catch`);
+                    callback(error, null);
+                });
             });
     }
 
@@ -861,8 +868,7 @@ class DBHelper {
         //DBHelper.debugObject('', 'dbhelper-getAllRestaurants()');
         //DBHelper.debugObject(is_append_properties, 'dbhelper-getAllRestaurants()-input-is_append_properties');
 
-        if (this.restaurants && this.restaurants.length > 0)
-        {
+        if (this.restaurants && this.restaurants.length > 0) {
             callback(null, this.restaurants);
         }
 
@@ -877,14 +883,14 @@ class DBHelper {
 
                     DBHelper
                         .getAllIndexDbRestaurants((error, result) => {
-                            //DBHelper.debugObject(error, 'dbhelper-getAllRestaurants()-2-3-getAllIndexDbRestaurants()-error');
+                            DBHelper.debugObject(error, 'dbhelper-getAllRestaurants()-2-3-getAllIndexDbRestaurants()-error');
                             //DBHelper.debugObject(result, 'dbhelper-getAllRestaurants()-2-3-getAllIndexDbRestaurants()-result');
                             if (error || !result) resolve2(false);
                             resolve2(result);
                         });
                 })
                     .then((result) => {
-                        //DBHelper.debugObject(result, 'dbhelper-getAllRestaurants()-2-4-getAllIndexDbRestaurants()-result');
+                        //DBHelper.debugObject(result, 'dbhelper-getAllRestaurants()-2-4-result');
                         return result;
                     })
                     .catch(error => {
@@ -900,8 +906,10 @@ class DBHelper {
                 //DBHelper.debugObject(this.restaurants, 'dbhelper-getAllRestaurants()-3-1-this.restaurants');
 
                 if (this.restaurants && this.restaurants.length > 0) return this.restaurants;
+                if (result && result.length > 0) return result;
 
                 return new Promise((resolve2, reject2) => {
+                    //DBHelper.debugObject(result, 'dbhelper-getAllRestaurants()-3-2-fetchRestaurants()-call');
                     DBHelper
                         .fetchRestaurants((error, result) => {
                             //DBHelper.debugObject(error, 'dbhelper-getAllRestaurants()-3-3-fetchRestaurants()-error');
@@ -924,10 +932,11 @@ class DBHelper {
                 //DBHelper.debugObject(this.restaurants, 'dbhelper-getAllRestaurants()-4-1-this.restaurants');
                 if (!restaurants || restaurants.length === 0) return this.restaurants;
 
-                if (!is_append_properties) {
-                    callback(null, restaurants);
-                    return false;
-                }
+                // not working in offline mode
+                // if (!is_append_properties) {
+                //     callback(null, restaurants);
+                //     return false;
+                // }
 
                 return new Promise((resolve2, reject2) => {
                     //DBHelper.debugObject(resolveResult, 'dbhelper-getAllRestaurants()-4-2-resolveResult');
@@ -1474,42 +1483,42 @@ class DBHelper {
      * update a review by its ID.
      */
     static addUpdateReviewById(review, callback) {
-        //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()');
-        //DBHelper.debugObject(review, 'dbhelper-addUpdateReviewById()-review');
+        DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()');
+        DBHelper.debugObject(review, 'dbhelper-addUpdateReviewById()-review');
 
         new Promise((resolve, reject) => {
             resolve(true);
         })
             .then((result) => {
-                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
                 return new Promise((resolve2, reject2) => {
-                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-call');
+                    DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-call');
                     DBHelper.addUpdateLocalAndCacheReviewById(review, (error, result) => {
-                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-error');
-                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-result');
+                        DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-error');
+                        DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-result');
                         if (error) reject2(error);
                         resolve2(result);
                     });
                 })
             })
             .then((result) => {
-                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
                 return new Promise((resolve3, reject3) => {
-                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-call');
+                    DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-call');
                     DBHelper.addUpdateRemoteReviewById(review, (error, result) => {
-                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-error');
-                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-result');
+                        DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-error');
+                        DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-result');
                         if (error) reject3(error);
                         resolve3(result);
                     });
                 })
             })
             .then((result) => {
-                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
                 return new Promise((resolve4, reject4) => {
                     DBHelper.fetchReviewsByRestaurantId(review.restaurant_id, (error, result) => {
-                        //DBHelper.debugObject(error, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-error');
-                        //DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-result');
+                        DBHelper.debugObject(error, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-error');
+                        DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-result');
                         if (error) reject4(error);
                         resolve4(result);
                     });
@@ -1691,7 +1700,7 @@ class DBHelper {
             //DBHelper.debugObject(requestURL, 'dbhelper-addUpdateRemoteReviewById()-requestURL');
         }
 
-        const requestMethod = 'POST';
+        const requestMethod = 'PUT';
         const requestBody = JSON.stringify(review);
         const requestHeaders = {
             'Content-Type': 'application/json'
@@ -1700,39 +1709,39 @@ class DBHelper {
         return fetch(requestURL, {
             method: requestMethod, body: requestBody, headers: requestHeaders
         })
-            .then((result) => {
-                //DBHelper.debugObject(result, 'dbhelper-addUpdateRemoteReviewById()-1-result');
-                //DBHelper.debugObject(navigator.onLine, 'dbhelper-addUpdateRemoteReviewById()-1-navigator.onLine');
-                if (navigator.onLine) return result;
+            .catch(error => {
+
+                if (navigator.onLine)
+                {
+                    // Oops!. Got an error from server.
+                    error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteReviewById()`);
+                    callback(error, null);
+                }
 
                 return dbPromise.then(function (db) {
 
-                    //DBHelper.debugObject('', 'review-pending-start');
                     const txPending = db.transaction('pending', 'readwrite');
                     let pendingStore = txPending.objectStore('pending');
 
-                    return pendingStore.then(() => {
-                        const pending = {
-                            id: Date.now(),
-                            url: requestURL,
-                            method: requestMethod,
-                            body: requestBody,
-                            headers: requestHeaders
-                        };
-                        pendingStore.put(pending);
-                        txPending.complete;
-                        return true;
-                    });
+                    const pending = {
+                        id: Date.now(),
+                        url: requestURL,
+                        method: requestMethod,
+                        body: requestBody,
+                        headers: requestHeaders
+                    };
+                    //DBHelper.debugObject(pending, 'dbhelper-addUpdateRemoteReviewById()-1-pending');
+
+                    pendingStore.put(pending);
+                    txPending.complete;
+                    return true;
+                }).then(result => {
+                    callback(null, result);
+                })
+                .catch(error => {
+                    error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteReviewById()-catch`);
+                    callback(error, null);
                 });
-            })
-            .then((result) => {
-                callback(null, result);
-            })
-            .catch(error => {
-                //DBHelper.debugObject(navigator.onLine, 'catch-navigator.onLine');
-                // Oops!. Got an error from server.
-                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteReviewById()-catch`);
-                callback(error, null);
             });
     }
 
@@ -1753,8 +1762,7 @@ class DBHelper {
 
                 if (is_db_populated) return is_db_populated;
 
-                //DBHelper.debugObject('', 'dbhelper-v1LoadData()-new Promise-load data');
-
+                //DBHelper.debugObject('', 'dbhelper-v1LoadData()-2-2-new Promise-load data');
                 return new Promise((resolve, reject) => {
                     //DBHelper.debugObject(is_db_populated, 'dbhelper-v1LoadData()-2-2-is_db_populated');
                     resolve(is_db_populated);
@@ -1801,21 +1809,25 @@ class DBHelper {
                     })
             })
             .then((is_db_populated_or_restaurants_or_reviews_added) => {
-                //DBHelper.debugObject(is_db_populated_or_restaurants_or_reviews_added, 'dbhelper-v1LoadData()-7-1-is_db_populated_or_restaurants_or_reviews_added');
-
+                //DBHelper.debugObject(is_db_populated_or_restaurants_or_reviews_added, 'dbhelper-v1LoadData()-3-1-is_db_populated_or_restaurants_or_reviews_added');
                 if (!is_db_populated_or_restaurants_or_reviews_added) {
                     callback('Unable to retrive restaurants data', null);
                     return;
                 }
 
+                //DBHelper.debugObject(load_all_restaurants, 'dbhelper-v1LoadData()-3-1-load_all_restaurants');
                 if (!load_all_restaurants) {
                     callback(null, true);
-                    return;
                 }
+                return load_all_restaurants;
+            })
+            .then((load_all_restaurants) => {
+                //DBHelper.debugObject(load_all_restaurants, 'dbhelper-v1LoadData()-4-1-load_all_restaurants');
+
+                if (!load_all_restaurants) return load_all_restaurants;
 
                 return new Promise((resolve, reject) => {
-                    //DBHelper.debugObject('', 'dbhelper-v1LoadData()-7-2-getAllRestaurants()-call');
-
+                    //DBHelper.debugObject('', 'dbhelper-v1LoadData()-4-2-getAllRestaurants()-call');
                     DBHelper.getAllIndexDbRestaurants((error, result) => {
                         //DBHelper.debugObject(error, 'dbhelper-v1LoadData()-7-3-getAllRestaurants()-error');
                         //DBHelper.debugObject(result, 'dbhelper-v1LoadData()-7-3-getAllRestaurants()-result');
@@ -1823,14 +1835,15 @@ class DBHelper {
                         resolve(result);
                     });
                 })
-                    .then((restaurants) => {
-                        //DBHelper.debugObject(restaurants, 'dbhelper-v1LoadData()-7-4-restaurants');
-                        callback(null, restaurants);
-                    })
                     .catch(error => {
                         //console.log('Load data error: ' + (error));
                         callback(error.message, null);
-                    });
+                    })
+            })
+            .then((restaurants) => {
+                //DBHelper.debugObject(restaurants, 'dbhelper-v1LoadData()-5-1-restaurants');
+                if (restaurants) callback(null, restaurants);
+                else callback('No Restaurants data', null);
             })
             .catch(error => {
                 //console.log('Load data error: ' + (error));
@@ -1947,6 +1960,63 @@ class DBHelper {
             });
     }
 
+    static processPendingRequests(callback) {
+        DBHelper.debugObject('', 'shared-processPendingRequests()');
+        DBHelper.debugObject(navigator.onLine, 'shared-processPendingRequests()-navigator.onLine');
+
+        if (!navigator.onLine) callback('Still not online', null);
+
+        dbPromise.then(function (db) {
+            const txPending = db.transaction('pending', 'readwrite');
+            let pendingStore = txPending.objectStore('pending');
+
+            let pendingDeleteIds = [];
+            pendingStore
+                .getAll()
+                .then((pendingRequests) => {
+                    if (!pendingRequests) return;
+
+                    pendingRequests.map(pending => {
+                        DBHelper.debugObject(pending, 'shared-processPendingRequests()-pending');
+                        return fetch(pending.url, {
+                            method: pending.method, body: pending.body, headers: pending.headers
+                        })
+                            .then(networkResponse => networkResponse.json())
+                            .then((networkResponse) => {
+                                DBHelper.debugObject(networkResponse, 'shared-processPendingRequests()-networkResponse');
+                                if (networkResponse) {
+                                    pendingDeleteIds.push(pending.id);
+                                }
+                            })
+                            .catch(error => {
+                                console.log(error + 'shared-processPendingRequests()-fetch-catch');
+                            });
+                    });
+                });
+            txPending.complete;
+            return pendingDeleteIds;
+        })
+            .then((pendingDeleteIds) => {
+                dbPromise.then(db => {
+                    const txPending = db.transaction('pending', 'readwrite');
+                    let pendingStore = txPending.objectStore('pending');
+                    pendingDeleteIds.forEach(id => {
+                        pendingStore.delete(id);
+                    });
+                })
+                            .catch(error => {
+                                console.log(error + 'shared-processPendingRequests()-dbPromise-delete');
+                            });
+            })
+            .then(() => {
+                callback(null, true);
+            })
+            .catch(error => {
+                console.log(error + 'shared-processPendingRequests()-catch');
+            });
+
+    }
+
 
     // https://stackoverflow.com/questions/4994201/is-object-empty
     static isEmpty(obj) {
@@ -2004,7 +2074,7 @@ class DBHelper {
             }
         }
         catch (error) {
-            console.log('Error=' + (error));
+            console.log('Error=' + (error) + ' - dbhelper-debugObject()-catch');
         }
     }
 
