@@ -113,7 +113,7 @@ self.addEventListener('fetch', function (event) {
             const cacheResponse = caches.match('/index.html');
             DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-addEventListener()-cacheResponse');
 
-            event.respondWith(cacheResponse
+            event.respondWith(caches.match('/index.html')
                 .catch(error => {
                     // Oops!. Got an error from server.
                     error.message = (`Request failed serve request. Returned status of ${error.message} - sw-addEventListener()-fetch`);
@@ -146,7 +146,7 @@ function servePhoto(request) {
         const cacheResponse = cache.match(storageUrl);
         DBHelper.debugObject((!!cacheResponse.then(response => response)), 'sw-servePhoto()-cacheResponse');
 
-        return cacheResponse.then(function (response) {
+        return cache.match(storageUrl).then(function (response) {
             if (response) return response;
 
             return fetch(request).then(function (networkResponse) {

@@ -615,8 +615,10 @@ class DBHelper {
                 return;
             }
             callback(null, restaurant);
-            return;
-        });
+        })
+            .catch(error => {
+                callback(error.message, null);
+            });
     }
 
     /**
@@ -716,7 +718,12 @@ class DBHelper {
         //DBHelper.debugObject('', 'dbhelper-addUpdateCacheRestaurantById()');
         //DBHelper.debugObject(restaurant_id, 'dbhelper-addUpdateCacheRestaurantById()-restaurant_id');
 
-        return caches
+        if (!navigator.onLine) {
+            callback(null, 'Offline');
+            return;
+        }
+
+        caches
             .open(staticCacheName)
             .then(function (cache) {
                 //DBHelper.debugObject('', 'dbhelper-addUpdateCacheRestaurantById()-Deleting index file cache');
@@ -732,18 +739,18 @@ class DBHelper {
                     });
                 return cache;
             }).then(function () {
-                //DBHelper.debugObject('', 'dbhelper-addUpdateCacheRestaurantById()-Adding index file cache');
-                return fetch(new Request('/'))
-                    .then(function () {
-                        //DBHelper.debugObject('', 'dbhelper-addUpdateCacheRestaurantById()-Adding restaurant file cache');
-                        return fetch(new Request('/restaurant.html?id=' + restaurant_id));
-                    })
-                    .catch(error => {
-                        return error;
-                    });
-            }).then(function () {
-                callback(null, true);
-            })
+            //DBHelper.debugObject('', 'dbhelper-addUpdateCacheRestaurantById()-Adding index file cache');
+            return fetch(new Request('/'))
+                .then(function () {
+                    //DBHelper.debugObject('', 'dbhelper-addUpdateCacheRestaurantById()-Adding restaurant file cache');
+                    return fetch(new Request('/restaurant.html?id=' + restaurant_id));
+                })
+                .catch(error => {
+                    return error;
+                });
+        }).then(function () {
+            callback(null, true);
+        })
             .catch(error => {
                 // Oops!. Got an error from server.
                 error.message = (`Request failed. Returned status of ${error.message}`);
@@ -772,8 +779,7 @@ class DBHelper {
         })
             .catch(error => {
 
-                if (navigator.onLine)
-                {
+                if (navigator.onLine) {
                     // Oops!. Got an error from server.
                     error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteRestaurantById()`);
                     callback(error, null);
@@ -799,10 +805,10 @@ class DBHelper {
                 }).then(result => {
                     callback(null, result);
                 })
-                .catch(error => {
-                    error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteRestaurantById()-catch`);
-                    callback(error, null);
-                });
+                    .catch(error => {
+                        error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteRestaurantById()-catch`);
+                        callback(error, null);
+                    });
             });
     }
 
@@ -1665,17 +1671,18 @@ class DBHelper {
         //DBHelper.debugObject('', 'dbhelper-addUpdateCacheReviewById()');
         //DBHelper.debugObject(review, 'dbhelper-addUpdateCacheReviewById()-review');
 
-        caches.open(staticCacheName).then(function (cache) {
-            //DBHelper.debugObject('', 'Deleting cache of restaurant file');
-            return cache.delete(new Request('/restaurant.html?id=' + review.restaurant_id));
+        new Promise((resolve, reject) => {
+            DBHelper.addUpdateCacheRestaurantById(restaurant_id, (error, result) => {
+                resolve(result);
+            });
         })
-            .then((result) => {
-                callback(null, result);
+            .then(() => {
+                callback(null, true);
             })
             .catch(error => {
-                //DBHelper.debugObject(error.message, 'dbhelper-addUpdateCacheReviewById()-catch');
-                //DBHelper.debugObject('', 'Cache does not exists, return true');
-                callback(null, false);
+                // Oops!. Got an error from server.
+                error.message = (`Request failed. Returned status of ${error.message} - addUpdateCacheReviewById()-catch`);
+                callback(error, null);
             });
     }
 
@@ -1711,8 +1718,7 @@ class DBHelper {
         })
             .catch(error => {
 
-                if (navigator.onLine)
-                {
+                if (navigator.onLine) {
                     // Oops!. Got an error from server.
                     error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteReviewById()`);
                     callback(error, null);
@@ -1738,10 +1744,10 @@ class DBHelper {
                 }).then(result => {
                     callback(null, result);
                 })
-                .catch(error => {
-                    error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteReviewById()-catch`);
-                    callback(error, null);
-                });
+                    .catch(error => {
+                        error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateRemoteReviewById()-catch`);
+                        callback(error, null);
+                    });
             });
     }
 
@@ -2004,9 +2010,9 @@ class DBHelper {
                         pendingStore.delete(id);
                     });
                 })
-                            .catch(error => {
-                                console.log(error + 'shared-processPendingRequests()-dbPromise-delete');
-                            });
+                    .catch(error => {
+                        console.log(error + 'shared-processPendingRequests()-dbPromise-delete');
+                    });
             })
             .then(() => {
                 callback(null, true);
