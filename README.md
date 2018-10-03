@@ -1,11 +1,14 @@
 # Steps to run the project
-1. Run API server project in command line `npm start`
+1. Command/Terminal window
+2. (if gulp run is needed? gulp --production OR gulp OR gulp watch)
+3. cd into public folder `cd public`
+4. Run local server `python -m SimpleHTTPServer 8000`
+5. Browser the website at `http://localhost:8000`
+
+# Steps to run api project
+1. Command/Terminal window
+2. run `npm start`
 2. Confirm the URL `http://localhost:1337/restaurants` returns results
-3. For this project, in command window
-4. (if gulp run is needed? gulp --production OR gulp OR gulp watch)
-5. cd into public folder `cd public`
-6. Run local server `python -m SimpleHTTPServer 8000`
-7. Browser the website at `http://localhost:8000`
 
 
 
