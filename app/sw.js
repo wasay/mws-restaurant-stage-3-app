@@ -5,7 +5,7 @@ self.importScripts('js/idb.js');
 
 self.importScripts('js/dbhelper.min.js');
 
-debug = true;
+// debug = true;
 
 //DBHelper.debugObject('', 'start /sw.js');
 

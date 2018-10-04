@@ -316,7 +316,7 @@ createRestaurantHTML = (restaurant) => {
 
     const elmFavorite = createFavoriteHTML(restaurant);
 
-    const name = document.createElement('h1');
+    const name = document.createElement('h3');
     name.innerHTML = restaurant.name + '&nbsp;';
     name.append(elmFavorite);
     li.append(name);

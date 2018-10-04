@@ -211,6 +211,7 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
 
         const day = document.createElement('td');
         day.innerHTML = key;
+        day.setAttribute('data-th', key);
         row.appendChild(day);
 
         const time = document.createElement('td');
@@ -230,7 +231,7 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
 
 
     const container = document.getElementById('reviews-container');
-    const title = document.createElement('h2');
+    const title = document.createElement('h4');
     title.innerHTML = 'Reviews';
 
     const modalButton = document.createElement('a');
@@ -372,21 +373,21 @@ function saveNewReview(restaurant_id, callback) {
 
     new Promise((resolve, reject) => {
         DBHelper.addUpdateReviewById(review, (error, result) => {
-            //DBHelper.debugObject(error, 'restaurant-saveNewReview()-addUpdateReviewById()-error');
-            //DBHelper.debugObject(result, 'restaurant-saveNewReview()-addUpdateReviewById()-result');
+            DBHelper.debugObject(error, 'restaurant-saveNewReview()-addUpdateReviewById()-error');
+            DBHelper.debugObject(result, 'restaurant-saveNewReview()-addUpdateReviewById()-result');
             if (error) reject(error);
             resolve(result);
         });
     })
         .then((result) => {
-            //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+            DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
             if (result) callback(null, result);
-            else callback('Unable to complete request', null);
+            else callback(result, null);
         })
         .catch(error => {
             // Oops!. Got an error from server.
             console.log(error + '-restaurant-addReviewModalListener()-catch');
-            callback(error.message, null);
+            callback(error, null);
         });
 
 }
@@ -504,21 +505,25 @@ function addReviewModalListener(restaurant_id) {
                 });
             })
                 .then((result) => {
-                    if (result) {
-                        //DBHelper.debugObject(msg, 'restaurant-addReviewModalListener()-msg');
+                    //DBHelper.debugObject(result, 'restaurant-addReviewModalListener()-result');
+                    if (!result) console.log('Offline, review will be saved once online.');
 
-                        let url = window.location;
-                        if (msg !== 'Review+saved') url += '&msg=Review+saved!';
-                        //DBHelper.debugObject(url, 'restaurant-addReviewModalListener()-url');
+                    let url = window.location;
+                    //if (msg !== 'Review+saved!' && msg !== 'Review+locally+saved!') url += '&msg=Review+saved!';
+                    //DBHelper.debugObject(url, 'restaurant-addReviewModalListener()-url');
 
-                        window.location = url;
-                    }
-                    else alert('Unable to process Review! Please try again later. -el');
+                    window.location = url;
                 })
                 .catch(error => {
                     // Oops!. Got an error from server.
                     console.log(error + '-restaurant-addReviewModalListener()-catch');
-                    alert('Unable to process Review! Please try again later. -cx');
+                    //alert('Unable to process Review! Please try again later. -cx');
+
+                    let url = window.location;
+                    //if (msg !== 'Review+saved!' && msg !== 'Review+locally+saved!') url += '&msg=Review+locally+saved!';
+                    //DBHelper.debugObject(url, 'restaurant-addReviewModalListener()-url');
+
+                    window.location = url;
                 });
         });
     }

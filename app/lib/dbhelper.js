@@ -1,6 +1,6 @@
 // js/dbhelper.js
 
-let debug = false;
+let debug = true;
 
 //DBHelper.debugObject('', 'start /lib/dbhelper.js');
 
@@ -617,7 +617,8 @@ class DBHelper {
             callback(null, restaurant);
         })
             .catch(error => {
-                callback(error.message, null);
+                error.message = error.message + ' - dbhelper-addUpdateRestaurantById()-catch';
+                callback(error, null);
             });
     }
 
@@ -762,13 +763,26 @@ class DBHelper {
      * update a restaurant by its ID.
      */
     static addUpdateRemoteRestaurantById(restaurant, callback) {
-        //DBHelper.debugObject('', 'dbhelper-addUpdateRemoteRestaurantById()');
-        //DBHelper.debugObject(restaurant, 'dbhelper-addUpdateRemoteRestaurantById()-restaurant');
+        DBHelper.debugObject('', 'dbhelper-addUpdateRemoteRestaurantById()');
+        DBHelper.debugObject(restaurant, 'dbhelper-addUpdateRemoteRestaurantById()-restaurant');
 
-        let requestURL = DBHelper.DATABASE_URL_RESTAURANTS + '/' + restaurant.id;
-        //DBHelper.debugObject(requestURL, 'dbhelper-addUpdateRemoteRestaurantById()-requestURL');
+        let requestURL = DBHelper.DATABASE_URL_RESTAURANTS;
+        DBHelper.debugObject(requestURL, 'dbhelper-addUpdateRemoteRestaurantById()-requestURL');
 
-        const requestMethod = 'PUT';
+        // add remove id name as well
+        const restaurant_id = restaurant.restaurant_id;
+        delete restaurant.restaurant_id;
+        if (!restaurant.id && restaurant_id) restaurant.id = restaurant_id;
+        DBHelper.debugObject(restaurant.id, 'dbhelper-addUpdateRemoteRestaurantById()-restaurant.id');
+
+        let requestMethod = 'POST';
+        if (restaurant.id.length > 0) {
+            requestMethod = 'PUT';
+            requestURL += '/' + restaurant.id;
+        }
+        DBHelper.debugObject(requestMethod, 'dbhelper-addUpdateRemoteRestaurantById()-requestMethod');
+        DBHelper.debugObject(requestURL, 'dbhelper-addUpdateRemoteRestaurantById()-requestURL');
+
         const requestBody = JSON.stringify(restaurant);
         const requestHeaders = {
             'Content-Type': 'application/json'
@@ -777,6 +791,10 @@ class DBHelper {
         return fetch(requestURL, {
             method: requestMethod, body: requestBody, headers: requestHeaders
         })
+            .then(response => response.json())
+            .then((result) => {
+                callback(null, result);
+            })
             .catch(error => {
 
                 if (navigator.onLine) {
@@ -865,7 +883,6 @@ class DBHelper {
                 callback(error, null);
             });
     }
-
 
     /**
      * get all restaurants.
@@ -1322,7 +1339,6 @@ class DBHelper {
             });
     }
 
-
     static getIndexDbOperatingHoursByRestaurantId(restaurant_id, callback) {
         //DBHelper.debugObject('', 'dbhelper-getIndexDbOperatingHoursByRestaurantId()');
         //DBHelper.debugObject(restaurant_id, 'dbhelper-getIndexDbOperatingHoursByRestaurantId()-restaurant_id');
@@ -1489,55 +1505,62 @@ class DBHelper {
      * update a review by its ID.
      */
     static addUpdateReviewById(review, callback) {
-        //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()');
-        //DBHelper.debugObject(review, 'dbhelper-addUpdateReviewById()-review');
+        DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()');
+        DBHelper.debugObject(review, 'dbhelper-addUpdateReviewById()-review');
 
         new Promise((resolve, reject) => {
             resolve(true);
         })
             .then((result) => {
-                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-1-result');
                 return new Promise((resolve2, reject2) => {
-                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-call');
+                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-1-1-addUpdateCacheReviewById()-call');
                     DBHelper.addUpdateLocalAndCacheReviewById(review, (error, result) => {
-                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-error');
-                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateCacheReviewById()-result');
+                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-1-2-addUpdateCacheReviewById()-error');
+                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-1-2-addUpdateCacheReviewById()-result');
                         if (error) reject2(error);
                         resolve2(result);
                     });
                 })
             })
             .then((result) => {
-                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-2-result');
                 return new Promise((resolve3, reject3) => {
-                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-call');
+                    //DBHelper.debugObject('', 'dbhelper-addUpdateReviewById()-2-1-addUpdateRemoteReviewById()-call');
                     DBHelper.addUpdateRemoteReviewById(review, (error, result) => {
-                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-error');
-                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-addUpdateRemoteReviewById()-result');
+                        //DBHelper.debugObject(error, 'dbhelper-addUpdateReviewById()-2-2-addUpdateRemoteReviewById()-error');
+                        //DBHelper.debugObject(result, 'dbhelper-addUpdateReviewById()-2-2-addUpdateRemoteReviewById()-result');
                         if (error) reject3(error);
                         resolve3(result);
                     });
                 })
             })
             .then((result) => {
-                //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+                DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-3-result');
                 return new Promise((resolve4, reject4) => {
                     DBHelper.fetchReviewsByRestaurantId(review.restaurant_id, (error, result) => {
-                        //DBHelper.debugObject(error, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-error');
-                        //DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-fetchReviewsByRestaurantId()-result');
+                        //DBHelper.debugObject(error, 'restaurant-addUpdateReviewById()-3-2-fetchReviewsByRestaurantId()-error');
+                        //DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-3-2-fetchReviewsByRestaurantId()-result');
                         if (error) reject4(error);
                         resolve4(result);
                     });
                 });
             })
             .then((result) => {
+                DBHelper.debugObject(result, 'restaurant-addUpdateReviewById()-4-result');
                 if (result) callback(null, true);
                 else callback('One or more process failed to update restaurant data', null);
             })
             .catch(error => {
+                DBHelper.debugObject(error, 'restaurant-addUpdateReviewById()-error');
                 // Oops!. Got an error from server.
-                error.message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateReviewById()-catch`);
-                callback(error.message, null);
+                let error_message;
+                if (typeof error === 'string') error_message = error;
+                else
+                {
+                    error_message = (`Request failed. Returned status of ${error.message} - dbhelper-addUpdateReviewById()-catch`);
+                }
+                callback(error_message, null);
             });
     }
 
@@ -1672,7 +1695,7 @@ class DBHelper {
         //DBHelper.debugObject(review, 'dbhelper-addUpdateCacheReviewById()-review');
 
         new Promise((resolve, reject) => {
-            DBHelper.addUpdateCacheRestaurantById(restaurant_id, (error, result) => {
+            DBHelper.addUpdateCacheRestaurantById(review.restaurant_id, (error, result) => {
                 resolve(result);
             });
         })
@@ -1690,8 +1713,8 @@ class DBHelper {
      * update a review by its ID.
      */
     static addUpdateRemoteReviewById(review, callback) {
-        //DBHelper.debugObject('', 'dbhelper-addUpdateRemoteReviewById()');
-        //DBHelper.debugObject(review, 'dbhelper-addUpdateRemoteReviewById()-review');
+        DBHelper.debugObject('', 'dbhelper-addUpdateRemoteReviewById()');
+        DBHelper.debugObject(review, 'dbhelper-addUpdateRemoteReviewById()-review');
 
         let requestURL = DBHelper.DATABASE_URL_REVIEWS;
         //DBHelper.debugObject(requestURL, 'dbhelper-addUpdateRemoteReviewById()-requestURL');
@@ -1699,15 +1722,17 @@ class DBHelper {
         // add remove id name as well
         const review_id = review.review_id;
         delete review.review_id;
-        review.id = review_id;
-        //DBHelper.debugObject(review.id, 'dbhelper-addUpdateRemoteReviewById()-review.id');
+        if (!review.id && review_id) review.id = review_id;
+        DBHelper.debugObject(review.id, 'dbhelper-addUpdateRemoteReviewById()-review.id');
 
+        let requestMethod = 'POST';
         if (review.id.length > 0) {
+            requestMethod = 'PUT';
             requestURL += '/' + review.id;
-            //DBHelper.debugObject(requestURL, 'dbhelper-addUpdateRemoteReviewById()-requestURL');
         }
+        DBHelper.debugObject(requestMethod, 'dbhelper-addUpdateRemoteReviewById()-requestMethod');
+        DBHelper.debugObject(requestURL, 'dbhelper-addUpdateRemoteReviewById()-requestURL');
 
-        const requestMethod = 'PUT';
         const requestBody = JSON.stringify(review);
         const requestHeaders = {
             'Content-Type': 'application/json'
@@ -1716,6 +1741,10 @@ class DBHelper {
         return fetch(requestURL, {
             method: requestMethod, body: requestBody, headers: requestHeaders
         })
+            .then(response => response.json())
+            .then((result) => {
+                callback(null, result);
+            })
             .catch(error => {
 
                 if (navigator.onLine) {
