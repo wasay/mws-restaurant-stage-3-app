@@ -16,8 +16,8 @@ self.addEventListener('install', function (event) {
     self.skipWaiting();
 
     // DBHelper.v1LoadData((error, result) => {
-    //     //DBHelper.debugObject(error, 'dbhelper-v1LoadData-error');
-    //     //DBHelper.debugObject(result, 'dbhelper-v1LoadData-result');
+         //DBHelper.debugObject(error, 'dbhelper-v1LoadData-error');
+         //DBHelper.debugObject(result, 'dbhelper-v1LoadData-result');
     // });
 
     event.waitUntil(

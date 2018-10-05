@@ -152,13 +152,13 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
     address.innerHTML = restaurant.address;
 
     // start date check
-    // //DBHelper.debugObject(restaurant.createdAt, 'restaurant-fillRestaurantHTML()-1-restaurant.createdAt');
+     //DBHelper.debugObject(restaurant.createdAt, 'restaurant-fillRestaurantHTML()-1-restaurant.createdAt');
     // const date_created_at = formattedUnixTime(restaurant.createdAt);
-    // //DBHelper.debugObject(date_created_at, 'restaurant-fillRestaurantHTML()-1-date_created_at');
+     //DBHelper.debugObject(date_created_at, 'restaurant-fillRestaurantHTML()-1-date_created_at');
     //
-    // //DBHelper.debugObject(restaurant.updatedAt, 'restaurant-fillRestaurantHTML()-1-restaurant.updatedAt');
+     //DBHelper.debugObject(restaurant.updatedAt, 'restaurant-fillRestaurantHTML()-1-restaurant.updatedAt');
     // const date_updated_at = formattedUnixTime(restaurant.updatedAt);
-    // //DBHelper.debugObject(date_updated_at, 'restaurant-fillRestaurantHTML()-1-date_updated_at');
+     //DBHelper.debugObject(date_updated_at, 'restaurant-fillRestaurantHTML()-1-date_updated_at');
     //
     // address.innerHTML += '<br>' + date_created_at;
     // address.innerHTML += '<br>' + date_updated_at;
@@ -373,14 +373,14 @@ function saveNewReview(restaurant_id, callback) {
 
     new Promise((resolve, reject) => {
         DBHelper.addUpdateReviewById(review, (error, result) => {
-            DBHelper.debugObject(error, 'restaurant-saveNewReview()-addUpdateReviewById()-error');
-            DBHelper.debugObject(result, 'restaurant-saveNewReview()-addUpdateReviewById()-result');
+            //DBHelper.debugObject(error, 'restaurant-saveNewReview()-addUpdateReviewById()-error');
+            //DBHelper.debugObject(result, 'restaurant-saveNewReview()-addUpdateReviewById()-result');
             if (error) reject(error);
             resolve(result);
         });
     })
         .then((result) => {
-            DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
+            //DBHelper.debugObject(result, 'restaurant-saveNewReview()-result');
             if (result) callback(null, result);
             else callback(result, null);
         })
